@@ -1,0 +1,41 @@
+<header class="py-8 mb-0 text-center">
+  <h1 class="text-3xl italic font-bold text-orange-600">
+    <a href="/">WhatsNext<span style="letter-spacing: -5px;">!?</span></a>
+  </h1>
+  {{#has_breadcrumbs}}
+  <ol class="flex justify-center pt-5">
+    {{#bc_step_title}}
+    <li class="flex text-black dark:text-neutral-200">
+      <div class="shrink-0">
+        <a href="/" class="hover:text-orange-400 text-orange-500">My Stories</a>
+        <span>&nbsp;&raquo;&nbsp;</span>
+      </div>
+    </li>
+    <li class="flex text-black dark:text-neutral-200">
+      <div class="shrink-0">
+        <a href="/stories/{{story_slug}}" class="hover:text-orange-400 text-orange-500">{{bc_story_title}}</a>
+        <span>&nbsp;&raquo;&nbsp;</span>
+      </div>
+    </li>
+    <li id="bc-step-title" class="flex text-black dark:text-neutral-200">
+      <div class="shrink-0">
+        <span>{{bc_step_title}}</span>
+      </div>
+    </li>
+    {{/bc_step_title}}
+    {{^bc_step_title}}
+    <li class="flex text-black dark:text-neutral-200">
+      <div class="shrink-0">
+        <a href="/" class="hover:text-orange-400 text-orange-500">My Stories</a>
+        <span>&nbsp;&raquo;&nbsp;</span>
+      </div>
+    </li>
+    <li id="bc-story-title" class="flex text-black dark:text-neutral-200">
+      <div class="shrink-0">
+        <span>{{bc_story_title}}</span>
+      </div>
+    </li>
+    {{/bc_step_title}}
+  </ol>
+  {{/has_breadcrumbs}}
+</header>

@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+set -e
+
+FLAGS="
+	-define:ODIN_TEST_THREADS=1 \
+	-collection:lib=lib \
+	-debug \
+"
+
+odin test tests/ $FLAGS

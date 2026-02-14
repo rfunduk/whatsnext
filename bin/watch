@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+set -e
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+cd "$DIR"
+
+cleanup() {
+	kill $CSS_PID 2>/dev/null
+	exit
+}
+trap cleanup INT TERM
+
+# Initial full build + start server
+$DIR/bin/build
+
+# Watch templates+styles — only recompile CSS (templates reload from disk in debug)
+(
+	while true; do
+		find templates styles -type f \
+			| entr -d "$DIR/bin/build" --css-only
+	done
+) &
+CSS_PID=$!
+
+# Watch odin sources — rebuild odin + restart server
+while true; do
+	find src lib -type f -name '*.odin' \
+		| entr -drs "$DIR/bin/build && $DIR/build/debug/whatsnext"
+done

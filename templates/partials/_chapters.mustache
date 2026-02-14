@@ -1,0 +1,99 @@
+<div id="chapters">
+  <div class="relative flex flex-col w-3/5 mx-auto mt-8">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-baseline gap-3">
+        <h3 class="py-2 text-xl font-bold border-b-2 border-orange-600">Chapters</h3>
+        <form method="POST" action="/stories/{{story_slug}}/steps">
+          <button type="submit" class="btn-secondary text-xs px-2 py-0.5">+ new</button>
+        </form>
+      </div>
+      <label class="flex items-center cursor-pointer select-none">
+        <span class="mr-3 text-sm font-medium text-neutral-500 dark:text-neutral-400">List</span>
+        <div class="relative">
+          {{#is_flowchart}}
+          <input type="checkbox" class="sr-only peer" checked
+            hx-post="/stories/{{story_slug}}/chapter-view"
+            hx-target="#chapters"
+            hx-swap="outerHTML"
+            hx-boost="false"
+            hx-vals='{"chapter_view":"list"}' />
+          {{/is_flowchart}}
+          {{^is_flowchart}}
+          <input type="checkbox" class="sr-only peer"
+            hx-post="/stories/{{story_slug}}/chapter-view"
+            hx-target="#chapters"
+            hx-swap="outerHTML"
+            hx-boost="false"
+            hx-vals='{"chapter_view":"flowchart"}' />
+          {{/is_flowchart}}
+          <div class="w-11 h-6 bg-neutral-200 dark:bg-neutral-600 border border-neutral-300 dark:border-neutral-500 rounded-full peer-checked:bg-orange-600 peer-checked:border-orange-600 transition-colors"></div>
+          <div class="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
+        </div>
+        <span class="ml-3 text-sm font-medium text-neutral-500 dark:text-neutral-400">Chart</span>
+      </label>
+    </div>
+  </div>
+
+  {{#is_flowchart}}
+  <div class="mt-3 mb-12 text-center">
+    <div id="mermaid-loading" class="flex items-center justify-center py-24 text-neutral-400">
+      <svg class="animate-spin h-5 w-5 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+      </svg>
+      <span>Rendering flowchart…</span>
+    </div>
+    <pre class="mermaid" style="visibility:hidden">{{{flowchart_defn}}}</pre>
+    <script>
+      (function() {
+        function init() {
+          mermaid.initialize({ startOnLoad: false, securityLevel: 'loose' });
+          mermaid.run().then(function() {
+            me('#mermaid-loading').remove();
+            any('.mermaid').run(el => el.style.visibility = '');
+          });
+        }
+        if (typeof mermaid !== 'undefined') {
+          init();
+        } else {
+          var s = document.createElement('script');
+          s.src = '/static/mermaid.min.js';
+          s.onload = init;
+          document.head.appendChild(s);
+        }
+      })();
+    </script>
+  </div>
+  {{/is_flowchart}}
+
+  {{^is_flowchart}}
+  <div class="relative flex flex-col w-3/5 gap-3 mx-auto mt-3 mb-12">
+    <ul>
+      {{#steps}}
+      <li class="hover:bg-neutral-100 dark:hover:bg-neutral-800 px-5 py-3 cursor-pointer">
+        <a class="block" href="/stories/{{story_slug}}/steps/{{slug}}">
+          <div class="flex items-center justify-between gap-5">
+            <span class="text-xl">{{display_name}}</span>
+            <div class="shrink-0 flex items-center">
+              {{#is_default}}
+              <span class="flex items-center justify-center mr-1 text-orange-600"
+                title="This chapter will be the first in the story.">&#9650;</span>
+              {{/is_default}}
+              {{#is_orphan}}
+              <span class="flex items-center justify-center mr-1 dark:text-neutral-400"
+                title="No chapters lead to this one!">&#128279;</span>
+              {{/is_orphan}}
+            </div>
+          </div>
+        </a>
+      </li>
+      {{/steps}}
+    </ul>
+
+    {{^steps}}
+    <p class="text-neutral-500 text-center">No chapters yet.</p>
+    {{/steps}}
+  </div>
+  {{/is_flowchart}}
+
+</div>

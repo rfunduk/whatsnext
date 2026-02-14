@@ -1,0 +1,5 @@
+build/**/*
+vendor/**/*
+static/
+uploads/
+*.db*

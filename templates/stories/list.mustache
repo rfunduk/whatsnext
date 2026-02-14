@@ -1,0 +1,33 @@
+<ul class="w-4/5 mx-auto">
+  {{#stories}}
+  <li>
+    <a href="/stories/{{slug}}"
+      class="hover:bg-neutral-100 dark:hover:bg-neutral-800 block px-8 py-6 my-2 text-4xl border dark:border-neutral-700 rounded cursor-pointer">
+      {{title}}{{^title}}Untitled{{/title}}
+    </a>
+  </li>
+  {{/stories}}
+
+  {{#has_stories}}
+  <li>
+    <form method="POST" action="/stories">
+      <button type="submit"
+        class="hover:bg-neutral-100 dark:hover:bg-neutral-800 w-full px-8 py-4 my-2 text-xl border dark:border-neutral-700 rounded cursor-pointer text-left">
+        <span class="text-orange-500">&#9000;</span>&nbsp;
+        <span>Start a New Story!</span>
+      </button>
+    </form>
+  </li>
+  {{/has_stories}}
+
+  {{^has_stories}}
+  <li>
+    <form method="POST" action="/stories">
+      <button type="submit"
+        class="hover:border-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900 w-full p-20 text-3xl text-center text-neutral-800 dark:text-neutral-200 bg-orange-100 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded cursor-pointer">
+        Write your first story!
+      </button>
+    </form>
+  </li>
+  {{/has_stories}}
+</ul>

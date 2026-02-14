@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+
+set -e
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+cd "$DIR"
+
+CSS_ONLY=false
+STATIC=false
+TARGET=debug
+for arg in "$@"; do
+	case "$arg" in
+		--css-only) CSS_ONLY=true ;;
+		--static) STATIC=true ;;
+		*) TARGET="$arg" ;;
+	esac
+done
+
+OUT_DIR=$DIR/build/$TARGET
+mkdir -p $OUT_DIR
+
+FLAGS="
+	-out:$OUT_DIR/whatsnext \
+	-define:MHD_LIB=../../vendor/libmicrohttpd-0.9.77/src/microhttpd/.libs/libmicrohttpd.a \
+	-define:HARU_LIB=../../vendor/libharu-2.4.5/build/src/libhpdf.a \
+	-define:MUSTACHE4C_LIB=../../../vendor/mustache4c/libmustache4c.a \
+	-collection:lib=lib \
+	-disallow-do \
+"
+
+if [ $TARGET == "debug" ]; then
+	FLAGS+="
+		-debug \
+		-define:USE_TRACKING_ALLOCATOR=true \
+	"
+else
+	FLAGS+="
+		-microarch:native \
+		-no-bounds-check \
+		-o:speed \
+		-vet-style -vet-semicolon -vet-cast -vet \
+	"
+	if [ "$STATIC" = true ]; then
+		FLAGS+="-extra-linker-flags:\"-static\" "
+	else
+		FLAGS+="-lto:thin "
+	fi
+fi
+
+mkdir -p static
+cp vendor/htmx.min.js static/
+cp vendor/surreal.js static/
+cp vendor/mermaid.min.js static/
+cp vendor/Sortable.min.js static/
+$DIR/build/tailwindcss -i styles/input.css -o static/output.css --minify
+
+if [ "$CSS_ONLY" = true ]; then
+	exit 0
+fi
+
+odin build src $FLAGS
+
+if [ $TARGET != "debug" ]; then
+	cp $OUT_DIR/$(basename $DIR) ${PREFIX-~/.local/bin}/
+fi

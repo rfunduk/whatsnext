@@ -1,0 +1,75 @@
+<form id="step-form" method="POST" action="/stories/{{story_slug}}/steps/{{step_slug}}"
+      hx-post="/stories/{{story_slug}}/steps/{{step_slug}}"
+      hx-target="#step-form" hx-swap="outerHTML"
+      enctype="multipart/form-data" hx-encoding="multipart/form-data">
+  <div class="flex flex-col items-center justify-center w-3/5 gap-3 mx-auto mt-8 mb-12">
+    <input type="text" name="internal_name" value="{{internal_name}}"
+      class="rounded px-4 py-3 text-3xl border dark:border-neutral-700 dark:bg-neutral-800 w-full focus:outline-none focus:ring focus:ring-zinc-200 dark:focus:ring-zinc-700"
+      placeholder="Chapter Name (only you will see this)" />
+
+    <div class="w-full text-center">
+      {{#image_top}}
+      <div class="relative w-full">
+        <img src="/uploads/{{image_top}}" class="w-full rounded border dark:border-neutral-700" />
+        <label class="absolute top-2 right-2 flex items-center gap-1 bg-white/80 dark:bg-neutral-800/80 rounded px-2 py-1 text-xs text-neutral-500 cursor-pointer hover:text-red-600">
+          <input type="checkbox" name="delete_image_top" value="1" class="accent-red-600" /> Remove
+        </label>
+      </div>
+      {{/image_top}}
+      {{^image_top}}
+      <div class="flex items-center w-full py-2 bg-neutral-100 dark:bg-neutral-800 border dark:border-neutral-700 rounded text-neutral-400">
+        <label class="flex-1 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 text-center">
+          <span data-default="Click to attach art above your text...">Click to attach art above your text...</span>
+          <input type="file" name="image_top" accept="image/png,image/jpeg" class="hidden"
+            onchange="var s=this.previousElementSibling,b=this.parentElement.nextElementSibling;if(this.files[0]){s.textContent='Ready to upload '+this.files[0].name;b.classList.remove('hidden')}else{s.textContent=s.dataset.default;b.classList.add('hidden')}" />
+        </label>
+        <button type="button" class="hidden pr-3 pl-2 cursor-pointer text-neutral-500 hover:text-red-600"
+          onclick="var l=this.previousElementSibling,inp=l.querySelector('input'),s=l.querySelector('span');inp.value='';s.textContent=s.dataset.default;this.classList.add('hidden')">&times;</button>
+      </div>
+      {{/image_top}}
+    </div>
+
+    <textarea name="content"
+      class="px-4 py-3 w-full border dark:border-neutral-700 dark:bg-neutral-800 rounded text-xl mt-1 focus:outline-none focus:ring focus:ring-zinc-200 dark:focus:ring-zinc-700 resize-none overflow-hidden"
+      rows="8" placeholder="What happens...!?">{{{body}}}</textarea>
+
+    <div class="w-full text-center">
+      {{#image_bottom}}
+      <div class="relative w-full">
+        <img src="/uploads/{{image_bottom}}" class="w-full rounded border dark:border-neutral-700" />
+        <label class="absolute top-2 right-2 flex items-center gap-1 bg-white/80 dark:bg-neutral-800/80 rounded px-2 py-1 text-xs text-neutral-500 cursor-pointer hover:text-red-600">
+          <input type="checkbox" name="delete_image_bottom" value="1" class="accent-red-600" /> Remove
+        </label>
+      </div>
+      {{/image_bottom}}
+      {{^image_bottom}}
+      <div class="flex items-center w-full py-2 bg-neutral-100 dark:bg-neutral-800 border dark:border-neutral-700 rounded text-neutral-400">
+        <label class="flex-1 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 text-center">
+          <span data-default="Click to attach art below your text...">Click to attach art below your text...</span>
+          <input type="file" name="image_bottom" accept="image/png,image/jpeg" class="hidden"
+            onchange="var s=this.previousElementSibling,b=this.parentElement.nextElementSibling;if(this.files[0]){s.textContent='Ready to upload '+this.files[0].name;b.classList.remove('hidden')}else{s.textContent=s.dataset.default;b.classList.add('hidden')}" />
+        </label>
+        <button type="button" class="hidden pr-3 pl-2 cursor-pointer text-neutral-500 hover:text-red-600"
+          onclick="var l=this.previousElementSibling,inp=l.querySelector('input'),s=l.querySelector('span');inp.value='';s.textContent=s.dataset.default;this.classList.add('hidden')">&times;</button>
+      </div>
+      {{/image_bottom}}
+    </div>
+
+    <div class="flex items-center justify-end gap-3 w-full">
+      {{#saved}}<span class="text-green-600 dark:text-green-400 text-sm">Saved!</span>{{/saved}}
+      {{^is_default}}
+      <button type="button" class="btn-secondary hover:text-red-600 hover:border-red-600 dark:hover:text-red-400 dark:hover:border-red-400"
+        hx-get="/stories/{{story_slug}}/steps/{{step_slug}}/delete"
+        hx-target="#modal-content" hx-swap="innerHTML" hx-boost="false">Delete</button>
+      {{/is_default}}
+      <button type="submit" class="btn-sm">Save</button>
+    </div>
+  </div>
+</form>
+{{#saved}}
+<li id="bc-step-title" class="flex text-black dark:text-neutral-200" hx-swap-oob="true">
+  <div class="shrink-0">
+    <span>{{#internal_name}}{{internal_name}}{{/internal_name}}{{^internal_name}}Untitled Chapter{{/internal_name}}</span>
+  </div>
+</li>
+{{/saved}}

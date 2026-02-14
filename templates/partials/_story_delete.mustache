@@ -1,0 +1,17 @@
+<script>me('#modal').showModal()</script>
+<div class="p-6">
+  <h3 class="text-lg font-semibold mb-3">Delete &ldquo;{{story_name}}&rdquo;?</h3>
+
+  <p class="text-sm text-neutral-500 dark:text-neutral-400 mb-1">This will permanently delete:</p>
+  <ul class="mb-3 ml-4 list-disc text-sm">
+    {{#step_count}}<li>{{step_count}} chapter{{#plural_steps}}s{{/plural_steps}}</li>{{/step_count}}
+    {{#choice_count}}<li>{{choice_count}} choice{{#plural_choices}}s{{/plural_choices}}</li>{{/choice_count}}
+  </ul>
+
+  <form method="POST" action="/stories/{{story_slug}}/delete">
+    <div class="flex justify-end gap-3">
+      <button type="button" class="btn-secondary" onclick="me('#modal').close()">Cancel</button>
+      <button type="submit" class="btn-secondary hover:text-red-600 hover:border-red-600 dark:hover:text-red-400 dark:hover:border-red-400">Delete</button>
+    </div>
+  </form>
+</div>

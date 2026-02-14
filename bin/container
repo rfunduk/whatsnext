@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -e
+
+IMAGE="whatsnext"
+
+case "${1:-build}" in
+	build)
+		podman build --layers -t "$IMAGE" .
+		;;
+	run)
+		shift
+		podman run -p 8020:8020 -v ./data:/app/data "$IMAGE" "$@"
+		;;
+	*)
+		echo "Usage: bin/container [build|run]"
+		exit 1
+		;;
+esac

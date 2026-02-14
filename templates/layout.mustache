@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>{{page_title}} - WhatsNext!?</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/static/output.css" />
+  <script src="/static/htmx.min.js"></script>
+  <script src="/static/surreal.js"></script>
+  <script>
+    function autoGrow(el) {
+      el.style.height = 'auto'
+      el.style.height = el.scrollHeight + 'px'
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      document.body.addEventListener('input', ev => {
+        if (ev.target.tagName === 'TEXTAREA') autoGrow(ev.target)
+      })
+      document.body.addEventListener('htmx:afterSettle', () => {
+        any('textarea').run(el => autoGrow(el))
+      })
+      any('textarea').run(el => autoGrow(el))
+    })
+  </script>
+</head>
+<body class="bg-white dark:bg-neutral-900 dark:text-neutral-100 min-h-screen" hx-boost="true">
+  <div class="container pb-12 mx-auto">
+    {{> _header}}
+    {{{content}}}
+  </div>
+  <dialog id="modal" class="modal">
+    <div id="modal-content"></div>
+  </dialog>
+  <script>
+    me('#modal').on('click', ev => { if (ev.target === ev.currentTarget) ev.currentTarget.close() })
+  </script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+@layer components {
+  .btn {
+    @apply cursor-pointer px-10 py-2 rounded-lg text-xl text-white bg-orange-600 hover:bg-orange-500;
+  }
+
+  .btn-secondary {
+    @apply cursor-pointer px-4 py-1 rounded-lg text-sm text-neutral-500 bg-white border border-black
+           hover:bg-white hover:text-neutral-900
+           disabled:cursor-default disabled:border-zinc-300 disabled:text-zinc-400
+           dark:bg-neutral-800 dark:border-neutral-600 dark:text-neutral-300
+           dark:hover:bg-neutral-700 dark:hover:text-neutral-100
+           dark:disabled:border-neutral-700 dark:disabled:text-neutral-500;
+  }
+
+  .btn-sm {
+    @apply cursor-pointer px-3 py-1 rounded-lg text-xl text-white bg-orange-600 hover:bg-orange-500;
+  }
+
+  .btn-tiny {
+    @apply p-1 text-neutral-400 text-xs cursor-pointer hover:text-orange-600;
+  }
+
+  .btn-light {
+    @apply bg-neutral-200 text-neutral-800 hover:bg-neutral-300
+           dark:bg-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-600;
+  }
+}
+
+/* Modal dialog */
+dialog.modal {
+  border: none;
+  border-radius: 0.375rem;
+  padding: 0;
+  max-width: 32rem;
+  width: 90vw;
+  margin: auto;
+  background: white;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+dialog.modal::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+@media (prefers-color-scheme: dark) {
+  dialog.modal {
+    background: #262626;
+    color: #e5e5e5;
+  }
+}
+
+/* Mermaid */
+pre.mermaid svg {
+  margin: 0 auto;
+}
+
+/* Mermaid flowchart node overrides */
+@media (prefers-color-scheme: dark) {
+  .mermaid .node rect {
+    fill: #262626 !important;
+    stroke: #404040 !important;
+  }
+  .mermaid .label foreignObject div,
+  .mermaid .label foreignObject div span,
+  .mermaid .nodeLabel,
+  .mermaid .label {
+    color: #e5e5e5 !important;
+  }
+  .mermaid .edgePaths path {
+    stroke: rgb(234, 88, 12) !important;
+  }
+  .mermaid .arrowheadPath {
+    fill: rgb(234, 88, 12) !important;
+  }
+}

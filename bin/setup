@@ -1,0 +1,230 @@
+#!/usr/bin/env bash
+
+set -e
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+
+# --- versions ---
+MHD_VERSION="0.9.77"
+HTMX_VERSION="2.0.8"
+MERMAID_VERSION="10.9.3"
+SORTABLE_VERSION="1.15.6"
+NOTO_SANS_VERSION="2.014"
+NOTO_SERIF_VERSION="2.014"
+
+# --- derived paths ---
+MHD_URL="https://github.com/Karlson2k/libmicrohttpd/releases/download/v${MHD_VERSION}/libmicrohttpd-${MHD_VERSION}.tar.gz"
+MHD_DIR="$DIR/vendor/libmicrohttpd-${MHD_VERSION}"
+
+mkdir -p "$DIR/vendor"
+
+echo "========================="
+echo "  libmicrohttpd $MHD_VERSION"
+echo "========================="
+
+if [ -f "$MHD_DIR/src/microhttpd/.libs/libmicrohttpd.a" ]; then
+	echo "Already built at $MHD_DIR"
+else
+	if [ ! -d "$MHD_DIR" ]; then
+		echo "Downloading: $MHD_URL"
+		curl -L "$MHD_URL" | tar -xzf - -C "$DIR/vendor/"
+	fi
+
+	cd "$MHD_DIR"
+	echo "Configuring..."
+	./configure --disable-shared --enable-static --disable-https --disable-doc --disable-examples --quiet
+	echo "Building..."
+	make -j$(nproc) --quiet
+	echo "Done."
+fi
+
+echo ""
+echo "Static library: $MHD_DIR/src/microhttpd/.libs/libmicrohttpd.a"
+echo "Header:         $MHD_DIR/src/include/microhttpd.h"
+
+# --- htmx ---
+
+echo ""
+echo "========================="
+echo "  htmx"
+echo "========================="
+
+HTMX_FILE="$DIR/vendor/htmx.min.js"
+
+if [ -f "$HTMX_FILE" ]; then
+	echo "Already downloaded at $HTMX_FILE"
+else
+	HTMX_URL="https://unpkg.com/htmx.org@${HTMX_VERSION}/dist/htmx.min.js"
+	echo "Downloading: $HTMX_URL"
+	curl -sL "$HTMX_URL" -o "$HTMX_FILE"
+	echo "Done."
+fi
+
+# --- surreal ---
+
+echo ""
+echo "========================="
+echo "  surreal"
+echo "========================="
+
+SURREAL_FILE="$DIR/vendor/surreal.js"
+
+if [ -f "$SURREAL_FILE" ]; then
+	echo "Already downloaded at $SURREAL_FILE"
+else
+	SURREAL_URL="https://cdn.jsdelivr.net/gh/gnat/surreal@main/surreal.js"
+	echo "Downloading: $SURREAL_URL"
+	curl -sL "$SURREAL_URL" -o "$SURREAL_FILE"
+	echo "Done."
+fi
+
+# --- mermaid ---
+
+echo ""
+echo "========================="
+echo "  mermaid"
+echo "========================="
+
+MERMAID_FILE="$DIR/vendor/mermaid.min.js"
+
+if [ -f "$MERMAID_FILE" ]; then
+	echo "Already downloaded at $MERMAID_FILE"
+else
+	MERMAID_URL="https://cdn.jsdelivr.net/npm/mermaid@${MERMAID_VERSION}/dist/mermaid.min.js"
+	echo "Downloading: $MERMAID_URL"
+	curl -sL "$MERMAID_URL" -o "$MERMAID_FILE"
+	echo "Done."
+fi
+
+# --- sortablejs ---
+
+echo ""
+echo "========================="
+echo "  sortablejs"
+echo "========================="
+
+SORTABLE_FILE="$DIR/vendor/Sortable.min.js"
+
+if [ -f "$SORTABLE_FILE" ]; then
+	echo "Already downloaded at $SORTABLE_FILE"
+else
+	SORTABLE_URL="https://cdn.jsdelivr.net/npm/sortablejs@${SORTABLE_VERSION}/Sortable.min.js"
+	echo "Downloading: $SORTABLE_URL"
+	curl -sL "$SORTABLE_URL" -o "$SORTABLE_FILE"
+	echo "Done."
+fi
+
+# --- noto fonts (for PDF embedding) ---
+
+echo ""
+echo "========================="
+echo "  Noto fonts"
+echo "========================="
+
+FONTS_DIR="$DIR/vendor/fonts"
+mkdir -p "$FONTS_DIR"
+
+if [ -f "$FONTS_DIR/NotoSans-Regular.ttf" ] && [ -f "$FONTS_DIR/NotoSerif-Regular.ttf" ]; then
+	echo "Already downloaded at $FONTS_DIR"
+else
+	NOTO_SANS_URL="https://github.com/notofonts/latin-greek-cyrillic/releases/download/NotoSans-v${NOTO_SANS_VERSION}/NotoSans-v${NOTO_SANS_VERSION}.zip"
+	NOTO_SERIF_URL="https://github.com/notofonts/latin-greek-cyrillic/releases/download/NotoSerif-v${NOTO_SERIF_VERSION}/NotoSerif-v${NOTO_SERIF_VERSION}.zip"
+
+	echo "Downloading NotoSans..."
+	curl -sL "$NOTO_SANS_URL" -o "/tmp/noto-sans.zip"
+	unzip -jo "/tmp/noto-sans.zip" \
+		"NotoSans/full/ttf/NotoSans-Regular.ttf" \
+		"NotoSans/full/ttf/NotoSans-Bold.ttf" \
+		"NotoSans/full/ttf/NotoSans-Italic.ttf" \
+		-d "$FONTS_DIR"
+	rm -f "/tmp/noto-sans.zip"
+
+	echo "Downloading NotoSerif..."
+	curl -sL "$NOTO_SERIF_URL" -o "/tmp/noto-serif.zip"
+	unzip -jo "/tmp/noto-serif.zip" \
+		"NotoSerif/hinted/ttf/NotoSerif-Regular.ttf" \
+		-d "$FONTS_DIR"
+	rm -f "/tmp/noto-serif.zip"
+
+	echo "Done."
+fi
+
+echo "Fonts in $FONTS_DIR:"
+ls "$FONTS_DIR"
+
+# --- tailwindcss standalone CLI ---
+
+echo ""
+echo "========================="
+echo "  tailwindcss CLI"
+echo "========================="
+
+TAILWIND_BIN="$DIR/build/tailwindcss"
+
+# --- libharu ---
+
+HARU_VERSION="2.4.5"
+
+echo ""
+echo "========================="
+echo "  libharu $HARU_VERSION"
+echo "========================="
+HARU_URL="https://github.com/libharu/libharu/archive/refs/tags/v${HARU_VERSION}.tar.gz"
+HARU_DIR="$DIR/vendor/libharu-${HARU_VERSION}"
+
+if [ -f "$HARU_DIR/build/src/libhpdf.a" ]; then
+	echo "Already built at $HARU_DIR"
+else
+	if [ ! -d "$HARU_DIR" ]; then
+		echo "Downloading: $HARU_URL"
+		curl -L "$HARU_URL" | tar -xzf - -C "$DIR/vendor/"
+	fi
+
+	mkdir -p "$HARU_DIR/build"
+	cd "$HARU_DIR/build"
+	echo "Configuring..."
+	cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON 2>&1 | tail -1
+	echo "Building..."
+	make -j$(nproc) --quiet
+	echo "Done."
+fi
+
+echo ""
+echo "Static library: $HARU_DIR/build/src/libhpdf.a"
+
+# --- mustache4c ---
+
+echo ""
+echo "========================="
+echo "  mustache4c"
+echo "========================="
+
+MUSTACHE4C_DIR="$DIR/vendor/mustache4c"
+
+if [ -f "$MUSTACHE4C_DIR/libmustache4c.a" ]; then
+	echo "Already built at $MUSTACHE4C_DIR"
+else
+	mkdir -p "$MUSTACHE4C_DIR"
+	echo "Downloading mustache4c source..."
+	curl -sL "https://raw.githubusercontent.com/mity/mustache4c/master/src/mustache.h" -o "$MUSTACHE4C_DIR/mustache.h"
+	curl -sL "https://raw.githubusercontent.com/mity/mustache4c/master/src/mustache.c" -o "$MUSTACHE4C_DIR/mustache.c"
+	cd "$MUSTACHE4C_DIR"
+	echo "Building..."
+	cc -c -O2 mustache.c -o mustache.o
+	ar rcs libmustache4c.a mustache.o
+	rm -f mustache.o
+	echo "Done."
+fi
+
+echo ""
+echo "Static library: $MUSTACHE4C_DIR/libmustache4c.a"
+
+if [ -f "$TAILWIND_BIN" ]; then
+	echo "Already downloaded at $TAILWIND_BIN"
+else
+	TAILWIND_URL="https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64"
+	echo "Downloading: $TAILWIND_URL"
+	curl -sL "$TAILWIND_URL" -o "$TAILWIND_BIN"
+	chmod +x "$TAILWIND_BIN"
+	echo "Done."
+fi
