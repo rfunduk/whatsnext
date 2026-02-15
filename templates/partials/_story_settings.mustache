@@ -10,13 +10,14 @@
         <input type="hidden" name="published" value="0" />
         <div class="relative">
           {{#published}}
-          <input type="checkbox" name="published" value="1" checked
-            class="sr-only peer" />
+            <input type="checkbox" name="published" value="1" checked
+              class="sr-only peer" />
           {{/published}}
           {{^published}}
-          <input type="checkbox" name="published" value="1"
-            class="sr-only peer" />
+            <input type="checkbox" name="published" value="1"
+              class="sr-only peer" />
           {{/published}}
+
           <div class="w-11 h-6 bg-neutral-200 dark:bg-neutral-600 border border-neutral-300 dark:border-neutral-500 rounded-full peer-checked:bg-orange-600 peer-checked:border-orange-600 transition-colors"></div>
           <div class="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
         </div>
@@ -35,7 +36,7 @@
     </div>
 
     {{#error}}
-    <p class="text-sm text-red-600 dark:text-red-400 mt-4">{{error}}</p>
+      <p class="text-sm text-red-600 dark:text-red-400 mt-4">{{error}}</p>
     {{/error}}
 
     <div class="flex justify-end gap-3 mt-5">

@@ -90,17 +90,26 @@ current_partials :: proc() -> map[string]mustache.Template {
 			defer os.close(dh)
 			entries, read_err := os.read_dir(dh, -1)
 			if read_err != nil { continue }
+			defer {
+				for entry in entries { delete(entry.fullpath) }
+				delete(entries)
+			}
 			for entry in entries {
 				if !strings.has_prefix(entry.name, "_") { continue }
 				if !strings.has_suffix(entry.name, ".mustache") { continue }
 				path := filepath.join({dir, entry.name})
+				defer delete(path)
 				bytes, ok := os.read_entire_file(path)
 				if !ok { continue }
 				key := strings.trim_suffix(entry.name, ".mustache")
 				raw[key] = string(bytes)
 			}
 		}
-		return mustache.compile_partials(raw)
+		compiled := mustache.compile_partials(raw)
+		// Compiled bytecode copies source strings, so free the raw data.
+		for _, value in raw { delete(transmute([]u8)value) }
+		delete(raw)
+		return compiled
 	} else {
 		return compiled_partials
 	}
@@ -112,7 +121,9 @@ current_layout :: proc() -> mustache.Template {
 	when ODIN_DEBUG {
 		bytes, ok := os.read_entire_file("templates/layout.mustache")
 		if !ok { return nil }
-		return mustache.compile(string(bytes))
+		compiled := mustache.compile(string(bytes))
+		delete(bytes)
+		return compiled
 	} else {
 		return compiled_layout
 	}

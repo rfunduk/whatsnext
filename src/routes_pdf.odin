@@ -53,9 +53,18 @@ route_download_pdf :: proc(connection: mhd.Connection, story_slug: string, pdf_t
 		title = "story"
 	}
 
-	// Sanitize filename: replace spaces with dashes, keep alphanumeric + dash
-	safe_title := strings.to_lower(title)
-	safe_title, _ = strings.replace_all(safe_title, " ", "-")
+	// Sanitize filename: lowercase, keep only [a-z0-9-]
+	lower_title := strings.to_lower(title)
+	safe_buf := strings.builder_make()
+	for ch in lower_title {
+		if (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '-' {
+			strings.write_rune(&safe_buf, ch)
+		} else if ch == ' ' {
+			strings.write_byte(&safe_buf, '-')
+		}
+	}
+	safe_title := strings.to_string(safe_buf)
+	if len(safe_title) == 0 { safe_title = "story" }
 
 	filename := fmt.aprintf(`inline; filename="%s-%s.pdf"`, safe_title, pdf_type)
 	cfilename := strings.clone_to_cstring(filename)

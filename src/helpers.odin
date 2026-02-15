@@ -360,9 +360,16 @@ fc_node :: proc(b: ^strings.Builder, id: i64, name: string) {
 	if len(label) == 0 { label = DEFAULT_STEP_NAME }
 	fmt.sbprintf(b, "%d[\"", id)
 	for ch in label {
-		if ch == '"' {
+		switch ch {
+		case '"':
 			strings.write_byte(b, '\'')
-		} else {
+		case ']':
+			strings.write_string(b, "#93;")
+		case '#':
+			strings.write_string(b, "#35;")
+		case '\n':
+			strings.write_byte(b, ' ')
+		case:
 			strings.write_rune(b, ch)
 		}
 	}

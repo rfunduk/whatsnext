@@ -192,6 +192,8 @@ cb_out_escaped :: proc "c" (output: [^]u8, size: c.size_t, renderer_data: rawptr
 			strings.write_string(rd.sb, "&gt;")
 		case '"':
 			strings.write_string(rd.sb, "&quot;")
+		case '\'':
+			strings.write_string(rd.sb, "&#39;")
 		case:
 			strings.write_rune(rd.sb, ch)
 		}

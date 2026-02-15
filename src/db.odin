@@ -21,6 +21,9 @@ db_open :: proc(path: string) -> bool {
 	}
 	db = _db
 
+	// Retry writes for up to 5 seconds if another thread holds the lock.
+	sqlite.busy_timeout(db, 5000)
+
 	for sql in SCHEMA {
 		status = sqlite.sql_exec(db, sql)
 		if status != nil {
@@ -63,17 +66,10 @@ db_run_migrations :: proc() -> bool {
 
 	// Check if table was empty — fresh DB or first migration run.
 	// In either case, schema already has everything, so skip execution.
-	count_query, count_status := sqlite.sql_bind(db, `
+	count_row, count_ok := sqlite.sql_one(db, `
 		SELECT COUNT(*)
 		FROM _migrations
-	`)
-	if count_status != nil {
-		log.errorf("Failed to query _migrations: %s", sqlite.status_explain(count_status))
-		return false
-	}
-	count_row, count_ok := sqlite.sql_row(db, count_query, struct {
-			count: i64,
-		})
+	`, struct { count: i64 })
 	is_fresh := !count_ok || count_row.count == 0
 
 	// Read migrations directory
@@ -121,19 +117,11 @@ db_run_migrations :: proc() -> bool {
 		}
 
 		// Check if already applied
-		check_query, check_status := sqlite.sql_bind(
-			db,
-			`
+		check_row, check_ok := sqlite.sql_one(db, `
 			SELECT COUNT(*)
 			FROM _migrations
 			WHERE name = ?
-		`,
-			entry.name,
-		)
-		if check_status != nil { return false }
-		check_row, check_ok := sqlite.sql_row(db, check_query, struct {
-				count: i64,
-			})
+		`, struct { count: i64 }, entry.name)
 		already_applied := check_ok && check_row.count > 0
 
 		if already_applied {
@@ -184,11 +172,9 @@ db_run_migrations :: proc() -> bool {
 db_backfill_slugs :: proc() -> bool {
 	// Backfill stories with empty slugs
 	for {
-		query, status := sqlite.sql_bind(db, `
+		row, ok := sqlite.sql_one(db, `
 			SELECT id FROM stories WHERE slug = '' LIMIT 1
-		`)
-		if status != nil { return false }
-		row, ok := sqlite.sql_row(db, query, struct { id: i64 })
+		`, struct { id: i64 })
 		if !ok { break }
 		slug := generate_slug()
 		s := sqlite.sql_exec(db, `UPDATE stories SET slug = ? WHERE id = ?`, slug, row.id)
@@ -201,11 +187,9 @@ db_backfill_slugs :: proc() -> bool {
 
 	// Backfill steps with empty slugs
 	for {
-		query, status := sqlite.sql_bind(db, `
+		row, ok := sqlite.sql_one(db, `
 			SELECT id FROM steps WHERE slug = '' LIMIT 1
-		`)
-		if status != nil { return false }
-		row, ok := sqlite.sql_row(db, query, struct { id: i64 })
+		`, struct { id: i64 })
 		if !ok { break }
 		slug := generate_slug()
 		s := sqlite.sql_exec(db, `UPDATE steps SET slug = ? WHERE id = ?`, slug, row.id)
@@ -249,49 +233,31 @@ db_list_stories :: proc() -> [dynamic]Story {
 }
 
 db_get_story :: proc(id: i64) -> (Story, bool) {
-	query, status := sqlite.sql_bind(
-		db,
-		`
-			SELECT id, slug, title, description, published, cover, password_hash,
-					chapter_view, created_at, updated_at
-			FROM stories
-			WHERE id = ?
-		`,
-		id,
-	)
-	if status != nil { return {}, false }
-	return sqlite.sql_row(db, query, Story)
+	return sqlite.sql_one(db, `
+		SELECT id, slug, title, description, published, cover, password_hash,
+				chapter_view, created_at, updated_at
+		FROM stories
+		WHERE id = ?
+	`, Story, id)
 }
 
 db_get_story_by_slug :: proc(slug: string) -> (Story, bool) {
-	query, status := sqlite.sql_bind(
-		db,
-		`
-			SELECT id, slug, title, description, published, cover, password_hash,
-					chapter_view, created_at, updated_at
-			FROM stories
-			WHERE slug = ?
-		`,
-		slug,
-	)
-	if status != nil { return {}, false }
-	return sqlite.sql_row(db, query, Story)
+	return sqlite.sql_one(db, `
+		SELECT id, slug, title, description, published, cover, password_hash,
+				chapter_view, created_at, updated_at
+		FROM stories
+		WHERE slug = ?
+	`, Story, slug)
 }
 
 db_get_step_by_slug :: proc(slug: string) -> (Step, bool) {
-	query, status := sqlite.sql_bind(
-		db,
-		`
-			SELECT id, slug, story_id, content, internal_name,
-					image_top, image_bottom, is_default,
-					created_at, updated_at
-			FROM steps
-			WHERE slug = ?
-		`,
-		slug,
-	)
-	if status != nil { return {}, false }
-	return sqlite.sql_row(db, query, Step)
+	return sqlite.sql_one(db, `
+		SELECT id, slug, story_id, content, internal_name,
+				image_top, image_bottom, is_default,
+				created_at, updated_at
+		FROM steps
+		WHERE slug = ?
+	`, Step, slug)
 }
 
 db_list_steps :: proc(story_id: i64) -> [dynamic]Step {
@@ -322,7 +288,7 @@ db_list_choices :: proc(story_id: i64) -> [dynamic]Choice {
 					prompt, created_at, updated_at
 			FROM choices
 			WHERE story_id = ?
-			ORDER BY id
+			ORDER BY ord, id
 		`,
 		story_id,
 	)
@@ -334,18 +300,18 @@ db_list_choices :: proc(story_id: i64) -> [dynamic]Choice {
 db_create_step :: proc(story_id: i64) -> (i64, string, bool) {
 	for _ in 0 ..< 10 {
 		slug := generate_slug()
-		status := sqlite.sql_exec(db, `
+		row, ok := sqlite.sql_one(db, `
 			INSERT INTO steps (story_id, slug)
 			VALUES (?, ?)
-		`, story_id, slug)
-		if status == nil {
-			return sqlite.last_insert_rowid(db), slug, true
+			RETURNING id
+		`, struct { id: i64 }, story_id, slug)
+		if ok {
+			return row.id, slug, true
 		}
-		if status == .Constraint {
-			continue
-		}
-		log.errorf("Failed to create step: %s", sqlite.status_explain(status))
-		return 0, "", false
+		// sql_one returns false for both "no row" and errors.
+		// Constraint errors (slug collision) are the retry case.
+		// Other errors are logged by sql_bind, so just retry.
+		continue
 	}
 	log.errorf("Failed to create step: slug collision after 10 attempts")
 	return 0, "", false
@@ -405,18 +371,15 @@ db_delete_story :: proc(id: i64) -> bool {
 db_create_story :: proc() -> (i64, string, bool) {
 	for _ in 0 ..< 10 {
 		slug := generate_slug()
-		status := sqlite.sql_exec(db, `
+		row, ok := sqlite.sql_one(db, `
 			INSERT INTO stories (slug, chapter_view)
 			VALUES (?, ?)
-		`, slug, DEFAULT_CHAPTER_VIEW)
-		if status == nil {
-			return sqlite.last_insert_rowid(db), slug, true
+			RETURNING id
+		`, struct { id: i64 }, slug, DEFAULT_CHAPTER_VIEW)
+		if ok {
+			return row.id, slug, true
 		}
-		if status == .Constraint {
-			continue
-		}
-		log.errorf("Failed to create story: %s", sqlite.status_explain(status))
-		return 0, "", false
+		continue
 	}
 	log.errorf("Failed to create story: slug collision after 10 attempts")
 	return 0, "", false
@@ -425,37 +388,28 @@ db_create_story :: proc() -> (i64, string, bool) {
 db_create_default_step :: proc(story_id: i64) -> (string, bool) {
 	for _ in 0 ..< 10 {
 		slug := generate_slug()
-		status := sqlite.sql_exec(db, `
+		_, ok := sqlite.sql_one(db, `
 			INSERT INTO steps (story_id, slug, is_default)
 			VALUES (?, ?, 1)
-		`, story_id, slug)
-		if status == nil {
+			RETURNING id
+		`, struct { id: i64 }, story_id, slug)
+		if ok {
 			return slug, true
 		}
-		if status == .Constraint {
-			continue
-		}
-		log.errorf("Failed to create default step: %s", sqlite.status_explain(status))
-		return "", false
+		continue
 	}
 	log.errorf("Failed to create default step: slug collision after 10 attempts")
 	return "", false
 }
 
 db_get_step :: proc(step_id: i64) -> (Step, bool) {
-	query, status := sqlite.sql_bind(
-		db,
-		`
-			SELECT id, slug, story_id, content, internal_name,
-					image_top, image_bottom, is_default,
-					created_at, updated_at
-			FROM steps
-			WHERE id = ?
-		`,
-		step_id,
-	)
-	if status != nil { return {}, false }
-	return sqlite.sql_row(db, query, Step)
+	return sqlite.sql_one(db, `
+		SELECT id, slug, story_id, content, internal_name,
+				image_top, image_bottom, is_default,
+				created_at, updated_at
+		FROM steps
+		WHERE id = ?
+	`, Step, step_id)
 }
 
 db_update_step :: proc(step_id: i64, internal_name: string, content: string) -> bool {
@@ -478,35 +432,38 @@ db_update_step :: proc(step_id: i64, internal_name: string, content: string) -> 
 }
 
 db_create_choice :: proc(story_id, source_step_id, dest_step_id: i64, prompt: string) -> (i64, bool) {
-	status := sqlite.sql_exec(
+	row, ok := sqlite.sql_one(
 		db,
 		`
 			INSERT INTO choices (story_id, source_step_id, dest_step_id, prompt, ord)
 			VALUES (?, ?, ?, ?, COALESCE((SELECT MAX(ord) FROM choices WHERE source_step_id = ?), -1) + 1)
+			RETURNING id
 		`,
+		struct { id: i64 },
 		story_id,
 		source_step_id,
 		dest_step_id,
 		prompt,
 		source_step_id,
 	)
-	if status != nil {
-		log.errorf("Failed to create choice: %s", sqlite.status_explain(status))
+	if !ok {
+		log.errorf("Failed to create choice")
 		return 0, false
 	}
-	return sqlite.last_insert_rowid(db), true
+	return row.id, true
 }
 
-db_update_choice :: proc(choice_id: i64, prompt: string) -> bool {
+db_update_choice :: proc(choice_id: i64, step_id: i64, prompt: string) -> bool {
 	status := sqlite.sql_exec(
 		db,
 		`
 			UPDATE choices
 			SET prompt = ?, updated_at = datetime('now')
-			WHERE id = ?
+			WHERE id = ? AND source_step_id = ?
 		`,
 		prompt,
 		choice_id,
+		step_id,
 	)
 	if status != nil {
 		log.errorf("Failed to update choice: %s", sqlite.status_explain(status))
@@ -552,11 +509,11 @@ db_delete_step :: proc(step_id: i64) -> bool {
 	return true
 }
 
-db_delete_choice :: proc(choice_id: i64) -> bool {
+db_delete_choice :: proc(choice_id: i64, step_id: i64) -> bool {
 	status := sqlite.sql_exec(db, `
 		DELETE FROM choices
-		WHERE id = ?
-	`, choice_id)
+		WHERE id = ? AND source_step_id = ?
+	`, choice_id, step_id)
 	if status != nil {
 		log.errorf("Failed to delete choice: %s", sqlite.status_explain(status))
 		return false

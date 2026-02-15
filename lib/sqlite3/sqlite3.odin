@@ -34,6 +34,10 @@ last_insert_rowid :: proc(conn: ^DB) -> i64 {
     return sqlite.last_insert_rowid(conn)
 }
 
+busy_timeout :: proc(conn: ^DB, ms: i32) -> Status {
+    return sqlite.busy_timeout(conn, ms)
+}
+
 sql_exec :: proc(db: ^DB, sql: string, args: ..any) -> Status {
     query, status := sql_bind(db, sql, ..args)
     if status != nil {
@@ -60,14 +64,15 @@ sql_bind :: proc(db: ^DB, sql: string, args: ..any) -> (^Query, Status) {
     }
     for arg, arg_idx in args {
         arg_idx := cast(i32)arg_idx + 1
-        arg_info := runtime.type_info_base(type_info_of(arg.id))
         if arg == nil {
             status = sqlite.bind_null(query, arg_idx)
-            if status == nil {
-                fmt.panicf("Unable to bind argument %v: %s", arg, status_explain(status))
+            if status != nil {
+                sqlite.finalize(query)
+                return nil, status
             }
+            continue
         }
-        status = Status.Ok
+        arg_info := runtime.type_info_base(type_info_of(arg.id))
         #partial switch arg_variant in arg_info.variant {
         case runtime.Type_Info_Integer:
             value, ok := reflect.as_i64(arg)
@@ -95,8 +100,27 @@ sql_bind :: proc(db: ^DB, sql: string, args: ..any) -> (^Query, Status) {
             value := reflect.as_bytes(arg)
             status = sqlite.bind_blob(query, arg_idx, raw_data(value), cast(i32)len(value), nil)
         }
+        if status != nil {
+            sqlite.finalize(query)
+            return nil, status
+        }
     }
     return query, nil
+}
+
+// Single-row query: prepares, binds, reads one row, and finalizes.
+// Use for db_get_* procs and INSERT...RETURNING to avoid statement leaks.
+sql_one :: proc(db: ^DB, sql: string, $T: typeid, args: ..any) -> (T, bool) where intrinsics.type_is_struct(T) {
+    query, status := sql_bind(db, sql, ..args)
+    if status != nil { return {}, false }
+    result, ok := sql_row(db, query, T)
+    if ok {
+        // sql_row left the statement open (expecting more rows).
+        // We only want one row, so finalize now.
+        sqlite.finalize(query)
+    }
+    // If !ok, sql_row already finalized.
+    return result, ok
 }
 
 sql_row :: proc(db: ^DB, query: ^Query, $T: typeid) -> (T, bool) where intrinsics.type_is_struct(T) {

@@ -110,7 +110,7 @@ route_step_show :: proc(connection: mhd.Connection, story_slug: string, step_slu
 	if !story_ok { return respond(connection, .NOT_FOUND, "Story not found\n", "text/plain") }
 
 	step, ok := db_get_step_by_slug(step_slug)
-	if !ok { return respond(connection, .NOT_FOUND, "Step not found\n", "text/plain") }
+	if !ok || step.story_id != story.id { return respond(connection, .NOT_FOUND, "Step not found\n", "text/plain") }
 
 	choices_data := build_choices_data(story, step)
 
@@ -156,7 +156,7 @@ route_save_step :: proc(
 	if !story_ok { return respond(connection, .NOT_FOUND, "Story not found\n", "text/plain") }
 
 	step, ok := db_get_step_by_slug(step_slug)
-	if !ok { return respond(connection, .NOT_FOUND, "Step not found\n", "text/plain") }
+	if !ok || step.story_id != story.id { return respond(connection, .NOT_FOUND, "Step not found\n", "text/plain") }
 
 	internal_name := post_value(pc, "internal_name")
 	content := post_value(pc, "content")
@@ -232,7 +232,7 @@ route_create_choice :: proc(
 	if !story_ok { return respond(connection, .NOT_FOUND, "Story not found\n", "text/plain") }
 
 	step, ok := db_get_step_by_slug(step_slug)
-	if !ok { return respond(connection, .NOT_FOUND, "Step not found\n", "text/plain") }
+	if !ok || step.story_id != story.id { return respond(connection, .NOT_FOUND, "Step not found\n", "text/plain") }
 
 	dest_str := post_value(pc, "dest_step_id")
 	prompt := post_value(pc, "prompt")
@@ -280,11 +280,11 @@ route_update_choice :: proc(
 	if !story_ok { return respond(connection, .NOT_FOUND, "Story not found\n", "text/plain") }
 
 	step, ok := db_get_step_by_slug(step_slug)
-	if !ok { return respond(connection, .NOT_FOUND, "Step not found\n", "text/plain") }
+	if !ok || step.story_id != story.id { return respond(connection, .NOT_FOUND, "Step not found\n", "text/plain") }
 
 	prompt := post_value(pc, "prompt")
 
-	if !db_update_choice(choice_id, prompt) {
+	if !db_update_choice(choice_id, step.id, prompt) {
 		return respond(connection, .INTERNAL_SERVER_ERROR, "Failed to update choice\n", "text/plain")
 	}
 
@@ -310,9 +310,9 @@ route_delete_choice :: proc(
 	if !story_ok { return respond(connection, .NOT_FOUND, "Story not found\n", "text/plain") }
 
 	step, ok := db_get_step_by_slug(step_slug)
-	if !ok { return respond(connection, .NOT_FOUND, "Step not found\n", "text/plain") }
+	if !ok || step.story_id != story.id { return respond(connection, .NOT_FOUND, "Step not found\n", "text/plain") }
 
-	if !db_delete_choice(choice_id) {
+	if !db_delete_choice(choice_id, step.id) {
 		return respond(connection, .INTERNAL_SERVER_ERROR, "Failed to delete choice\n", "text/plain")
 	}
 
@@ -338,7 +338,7 @@ route_reorder_choices :: proc(
 	if !story_ok { return respond(connection, .NOT_FOUND, "Story not found\n", "text/plain") }
 
 	step, ok := db_get_step_by_slug(step_slug)
-	if !ok { return respond(connection, .NOT_FOUND, "Step not found\n", "text/plain") }
+	if !ok || step.story_id != story.id { return respond(connection, .NOT_FOUND, "Step not found\n", "text/plain") }
 
 	order_str := post_value(pc, "order")
 	if len(order_str) > 0 {
@@ -368,11 +368,11 @@ route_reorder_choices :: proc(
 }
 
 route_step_delete_confirm :: proc(connection: mhd.Connection, story_slug: string, step_slug: string) -> mhd.Result {
-	step, ok := db_get_step_by_slug(step_slug)
-	if !ok { return respond(connection, .NOT_FOUND, "Step not found\n", "text/plain") }
-
 	story, story_ok := db_get_story_by_slug(story_slug)
 	if !story_ok { return respond(connection, .NOT_FOUND, "Story not found\n", "text/plain") }
+
+	step, ok := db_get_step_by_slug(step_slug)
+	if !ok || step.story_id != story.id { return respond(connection, .NOT_FOUND, "Step not found\n", "text/plain") }
 
 	step_name := step.internal_name
 	if len(step_name) == 0 { step_name = DEFAULT_STEP_NAME }
@@ -412,8 +412,11 @@ route_step_delete_confirm :: proc(connection: mhd.Connection, story_slug: string
 }
 
 route_delete_step :: proc(connection: mhd.Connection, story_slug: string, step_slug: string) -> mhd.Result {
+	story, story_ok := db_get_story_by_slug(story_slug)
+	if !story_ok { return respond(connection, .NOT_FOUND, "Story not found\n", "text/plain") }
+
 	step, ok := db_get_step_by_slug(step_slug)
-	if !ok { return respond(connection, .NOT_FOUND, "Step not found\n", "text/plain") }
+	if !ok || step.story_id != story.id { return respond(connection, .NOT_FOUND, "Step not found\n", "text/plain") }
 
 	if step.is_default {
 		return respond(connection, .BAD_REQUEST, "Cannot delete the default step\n", "text/plain")

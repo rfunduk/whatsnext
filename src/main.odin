@@ -56,6 +56,8 @@ main :: proc() {
 
 	os.make_directory("uploads")
 
+	pdf_generating = make(map[i64]bool)
+
 	load_templates()
 	defer cleanup_templates()
 
