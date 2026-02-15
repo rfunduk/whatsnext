@@ -3,24 +3,27 @@
 set -e
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
+mkdir -p "$DIR/vendor"
 
 # --- versions ---
 MHD_VERSION="0.9.77"
+HARU_VERSION="2.4.5"
+TAILWIND_CLI_VERSION="4.1.18"
 HTMX_VERSION="2.0.8"
 MERMAID_VERSION="10.9.3"
 SORTABLE_VERSION="1.15.6"
+SURREAL_VERSION="1.3.4"
+MUSTACHE4C_COMMIT="74911a1ad2b78d1325b14853aa63d566622ca880"
 NOTO_SANS_VERSION="2.014"
 NOTO_SERIF_VERSION="2.014"
 
-# --- derived paths ---
-MHD_URL="https://github.com/Karlson2k/libmicrohttpd/releases/download/v${MHD_VERSION}/libmicrohttpd-${MHD_VERSION}.tar.gz"
-MHD_DIR="$DIR/vendor/libmicrohttpd-${MHD_VERSION}"
-
-mkdir -p "$DIR/vendor"
 
 echo "========================="
 echo "  libmicrohttpd $MHD_VERSION"
 echo "========================="
+
+MHD_URL="https://github.com/Karlson2k/libmicrohttpd/releases/download/v${MHD_VERSION}/libmicrohttpd-${MHD_VERSION}.tar.gz"
+MHD_DIR="$DIR/vendor/libmicrohttpd-${MHD_VERSION}"
 
 if [ -f "$MHD_DIR/src/microhttpd/.libs/libmicrohttpd.a" ]; then
 	echo "Already built at $MHD_DIR"
@@ -38,11 +41,49 @@ else
 	echo "Done."
 fi
 
-echo ""
-echo "Static library: $MHD_DIR/src/microhttpd/.libs/libmicrohttpd.a"
-echo "Header:         $MHD_DIR/src/include/microhttpd.h"
 
-# --- htmx ---
+echo ""
+echo "========================="
+echo "  libharu $HARU_VERSION"
+echo "========================="
+HARU_URL="https://github.com/libharu/libharu/archive/refs/tags/v${HARU_VERSION}.tar.gz"
+HARU_DIR="$DIR/vendor/libharu-${HARU_VERSION}"
+
+if [ -f "$HARU_DIR/build/src/libhpdf.a" ]; then
+	echo "Already built at $HARU_DIR"
+else
+	if [ ! -d "$HARU_DIR" ]; then
+		echo "Downloading: $HARU_URL"
+		curl -L "$HARU_URL" | tar -xzf - -C "$DIR/vendor/"
+	fi
+
+	mkdir -p "$HARU_DIR/build"
+	cd "$HARU_DIR/build"
+	echo "Configuring..."
+	cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON 2>&1 | tail -1
+	echo "Building..."
+	make -j$(nproc) --quiet
+	echo "Done."
+fi
+
+
+echo ""
+echo "========================="
+echo "  tailwindcss CLI"
+echo "========================="
+
+TAILWIND_BIN="$DIR/build/tailwindcss"
+TAILWIND_URL="https://github.com/tailwindlabs/tailwindcss/releases/download/v${TAILWIND_CLI_VERSION}/tailwindcss-linux-x64"
+
+if [ -f "$TAILWIND_BIN" ]; then
+	echo "Already downloaded at $TAILWIND_BIN"
+else
+	echo "Downloading: $TAILWIND_URL"
+	curl -sL "$TAILWIND_URL" -o "$TAILWIND_BIN"
+	chmod +x "$TAILWIND_BIN"
+	echo "Done."
+fi
+
 
 echo ""
 echo "========================="
@@ -60,7 +101,6 @@ else
 	echo "Done."
 fi
 
-# --- surreal ---
 
 echo ""
 echo "========================="
@@ -72,13 +112,14 @@ SURREAL_FILE="$DIR/vendor/surreal.js"
 if [ -f "$SURREAL_FILE" ]; then
 	echo "Already downloaded at $SURREAL_FILE"
 else
-	SURREAL_URL="https://cdn.jsdelivr.net/gh/gnat/surreal@main/surreal.js"
+	SURREAL_URL="https://github.com/gnat/surreal/archive/refs/tags/${SURREAL_VERSION}.zip"
 	echo "Downloading: $SURREAL_URL"
-	curl -sL "$SURREAL_URL" -o "$SURREAL_FILE"
+	curl -sL "$SURREAL_URL" -o "/tmp/surreal.zip"
+	unzip -jo "/tmp/surreal.zip" "surreal-${SURREAL_VERSION}/surreal.js" -d "$DIR/vendor/"
+	rm -f "/tmp/surreal.zip"
 	echo "Done."
 fi
 
-# --- mermaid ---
 
 echo ""
 echo "========================="
@@ -96,7 +137,6 @@ else
 	echo "Done."
 fi
 
-# --- sortablejs ---
 
 echo ""
 echo "========================="
@@ -114,7 +154,6 @@ else
 	echo "Done."
 fi
 
-# --- noto fonts (for PDF embedding) ---
 
 echo ""
 echo "========================="
@@ -149,48 +188,6 @@ else
 	echo "Done."
 fi
 
-echo "Fonts in $FONTS_DIR:"
-ls "$FONTS_DIR"
-
-# --- tailwindcss standalone CLI ---
-
-echo ""
-echo "========================="
-echo "  tailwindcss CLI"
-echo "========================="
-
-TAILWIND_BIN="$DIR/build/tailwindcss"
-
-# --- libharu ---
-
-HARU_VERSION="2.4.5"
-
-echo ""
-echo "========================="
-echo "  libharu $HARU_VERSION"
-echo "========================="
-HARU_URL="https://github.com/libharu/libharu/archive/refs/tags/v${HARU_VERSION}.tar.gz"
-HARU_DIR="$DIR/vendor/libharu-${HARU_VERSION}"
-
-if [ -f "$HARU_DIR/build/src/libhpdf.a" ]; then
-	echo "Already built at $HARU_DIR"
-else
-	if [ ! -d "$HARU_DIR" ]; then
-		echo "Downloading: $HARU_URL"
-		curl -L "$HARU_URL" | tar -xzf - -C "$DIR/vendor/"
-	fi
-
-	mkdir -p "$HARU_DIR/build"
-	cd "$HARU_DIR/build"
-	echo "Configuring..."
-	cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON 2>&1 | tail -1
-	echo "Building..."
-	make -j$(nproc) --quiet
-	echo "Done."
-fi
-
-echo ""
-echo "Static library: $HARU_DIR/build/src/libhpdf.a"
 
 # --- mustache4c ---
 
@@ -204,27 +201,15 @@ MUSTACHE4C_DIR="$DIR/vendor/mustache4c"
 if [ -f "$MUSTACHE4C_DIR/libmustache4c.a" ]; then
 	echo "Already built at $MUSTACHE4C_DIR"
 else
+	echo "Downloading mustache4c at ${MUSTACHE4C_COMMIT}..."
+	curl -sL "https://github.com/mity/mustache4c/archive/${MUSTACHE4C_COMMIT}.tar.gz" -o "/tmp/mustache4c.tar.gz"
 	mkdir -p "$MUSTACHE4C_DIR"
-	echo "Downloading mustache4c source..."
-	curl -sL "https://raw.githubusercontent.com/mity/mustache4c/master/src/mustache.h" -o "$MUSTACHE4C_DIR/mustache.h"
-	curl -sL "https://raw.githubusercontent.com/mity/mustache4c/master/src/mustache.c" -o "$MUSTACHE4C_DIR/mustache.c"
+	tar -xzf "/tmp/mustache4c.tar.gz" --strip-components=2 -C "$MUSTACHE4C_DIR" "mustache4c-${MUSTACHE4C_COMMIT}/src/"
+	rm -f "/tmp/mustache4c.tar.gz"
 	cd "$MUSTACHE4C_DIR"
 	echo "Building..."
 	cc -c -O2 mustache.c -o mustache.o
 	ar rcs libmustache4c.a mustache.o
 	rm -f mustache.o
-	echo "Done."
-fi
-
-echo ""
-echo "Static library: $MUSTACHE4C_DIR/libmustache4c.a"
-
-if [ -f "$TAILWIND_BIN" ]; then
-	echo "Already downloaded at $TAILWIND_BIN"
-else
-	TAILWIND_URL="https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64"
-	echo "Downloading: $TAILWIND_URL"
-	curl -sL "$TAILWIND_URL" -o "$TAILWIND_BIN"
-	chmod +x "$TAILWIND_BIN"
 	echo "Done."
 fi
