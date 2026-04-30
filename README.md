@@ -1,4 +1,4 @@
-# WhatsNext
+<img src="./assets/whatsnext.png" alt="WhatsNext!?" width=567 />
 
 An interactive choose-your-own-adventure story builder with PDF export.
 
