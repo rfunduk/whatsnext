@@ -15,7 +15,7 @@ dir_entries: [2][]os.File_Info
 dir_entry_count: int
 
 load_templates :: proc() {
-	layout_bytes = os.read_entire_file("templates/layout.mustache") or_else {}
+	layout_bytes, _ = os.read_entire_file_from_path("templates/layout.mustache", context.allocator)
 	if len(layout_bytes) == 0 {
 		log.errorf("Failed to load layout template")
 		return
@@ -53,7 +53,7 @@ load_partials_from_dir :: proc(dir: string) {
 	}
 	defer os.close(dh)
 
-	entries, read_err := os.read_dir(dh, -1)
+	entries, read_err := os.read_dir(dh, -1, context.allocator)
 	if read_err != nil { return }
 
 	if dir_entry_count < len(dir_entries) {
@@ -65,10 +65,10 @@ load_partials_from_dir :: proc(dir: string) {
 		if !strings.has_prefix(entry.name, "_") { continue }
 		if !strings.has_suffix(entry.name, ".mustache") { continue }
 
-		path := filepath.join({dir, entry.name})
+		path, _ := filepath.join({dir, entry.name}, context.allocator)
 		defer delete(path)
-		bytes, ok := os.read_entire_file(path)
-		if !ok {
+		bytes, read_file_err := os.read_entire_file_from_path(path, context.allocator)
+		if read_file_err != nil {
 			log.warnf("Failed to read partial: %s", path)
 			continue
 		}
@@ -88,7 +88,7 @@ current_partials :: proc() -> map[string]mustache.Template {
 			dh, open_err := os.open(dir)
 			if open_err != nil { continue }
 			defer os.close(dh)
-			entries, read_err := os.read_dir(dh, -1)
+			entries, read_err := os.read_dir(dh, -1, context.allocator)
 			if read_err != nil { continue }
 			defer {
 				for entry in entries { delete(entry.fullpath) }
@@ -97,10 +97,10 @@ current_partials :: proc() -> map[string]mustache.Template {
 			for entry in entries {
 				if !strings.has_prefix(entry.name, "_") { continue }
 				if !strings.has_suffix(entry.name, ".mustache") { continue }
-				path := filepath.join({dir, entry.name})
+				path, _ := filepath.join({dir, entry.name}, context.allocator)
 				defer delete(path)
-				bytes, ok := os.read_entire_file(path)
-				if !ok { continue }
+				bytes, read_err2 := os.read_entire_file_from_path(path, context.allocator)
+				if read_err2 != nil { continue }
 				key := strings.trim_suffix(entry.name, ".mustache")
 				raw[key] = string(bytes)
 			}
@@ -119,8 +119,8 @@ current_partials :: proc() -> map[string]mustache.Template {
 // In release builds, returns the startup-cached compiled layout.
 current_layout :: proc() -> mustache.Template {
 	when ODIN_DEBUG {
-		bytes, ok := os.read_entire_file("templates/layout.mustache")
-		if !ok { return nil }
+		bytes, read_err := os.read_entire_file_from_path("templates/layout.mustache", context.allocator)
+		if read_err != nil { return nil }
 		compiled := mustache.compile(string(bytes))
 		delete(bytes)
 		return compiled
@@ -151,8 +151,8 @@ render_partial :: proc(partial_name: string, data: any) -> (string, bool) {
 }
 
 render_template :: proc(template_path: string, data: any) -> (string, bool) {
-	bytes, ok := os.read_entire_file(template_path)
-	if !ok {
+	bytes, read_err := os.read_entire_file_from_path(template_path, context.allocator)
+	if read_err != nil {
 		log.errorf("Failed to load template: %s", template_path)
 		return "", false
 	}

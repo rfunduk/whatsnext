@@ -80,7 +80,7 @@ db_run_migrations :: proc() -> bool {
 	}
 	defer os.close(fd)
 
-	entries, read_err := os.read_dir(fd, -1)
+	entries, read_err := os.read_dir(fd, -1, context.allocator)
 	if read_err != os.ERROR_NONE {
 		log.errorf("Failed to read migrations directory")
 		return false
@@ -132,8 +132,8 @@ db_run_migrations :: proc() -> bool {
 		// Read and execute migration file
 		path := strings.concatenate({"migrations/", entry.name})
 		defer delete(path)
-		sql_data, read_ok := os.read_entire_file(path)
-		if !read_ok {
+		sql_data, read_file_err := os.read_entire_file_from_path(path, context.allocator)
+		if read_file_err != nil {
 			log.errorf("Migration %s: failed to read file", entry.name)
 			return false
 		}

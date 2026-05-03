@@ -3,3 +3,4 @@ vendor/**/*
 static/
 uploads/
 *.db*
+tests.bin.*

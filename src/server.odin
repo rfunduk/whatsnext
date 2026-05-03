@@ -20,7 +20,7 @@ sigint_handler :: proc "c" (_: posix.Signal) { running = false }
 server_start :: proc() -> mhd.Daemon {
 	posix.signal(.SIGINT, sigint_handler)
 
-	cores := os.processor_core_count()
+	cores := os.get_processor_core_count()
 	log.infof("Starting server on :%d with %d threads", PORT, cores)
 
 	daemon := mhd.start_daemon(
@@ -42,7 +42,7 @@ server_start :: proc() -> mhd.Daemon {
 		return nil
 	}
 
-	log.infof("Listening on http://localhost:%d", PORT)
+	log.infof("Listening on http://0.0.0.0:%d", PORT)
 	return daemon
 }
 

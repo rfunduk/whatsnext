@@ -42,8 +42,6 @@ else
 	"
 	if [ "$STATIC" = true ]; then
 		FLAGS+="-extra-linker-flags:\"-static\" "
-	else
-		FLAGS+="-lto:thin "
 	fi
 fi
 

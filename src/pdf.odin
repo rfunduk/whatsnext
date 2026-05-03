@@ -812,8 +812,8 @@ pdf_render_line :: proc(
 ) {
 	// Image rendering
 	if len(line.image_path) > 0 && doc != nil {
-		data, ok := os.read_entire_file(line.image_path)
-		if ok {
+		data, read_err := os.read_entire_file_from_path(line.image_path, context.allocator)
+		if read_err == nil {
 			defer delete(data)
 			image := pdf_load_image(doc, line.image_path, data)
 			if image != nil {
@@ -881,8 +881,8 @@ pdf_color_for_style :: proc(style: Font_Style) -> [3]f32 {
 // --- Image helpers ---
 
 pdf_measure_image :: proc(doc: ^haru.Doc, path: string) -> (width: f32, height: f32) {
-	data, ok := os.read_entire_file(path)
-	if !ok { return 0, 0 }
+	data, read_err := os.read_entire_file_from_path(path, context.allocator)
+	if read_err != nil { return 0, 0 }
 	defer delete(data)
 
 	image := pdf_load_image(doc, path, data)

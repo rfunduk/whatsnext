@@ -8,7 +8,7 @@ mkdir -p "$DIR/vendor"
 # --- versions ---
 MHD_VERSION="0.9.77"
 HARU_VERSION="2.4.5"
-TAILWIND_CLI_VERSION="4.2.0"
+TAILWIND_CLI_VERSION="4.2.4"
 HTMX_VERSION="2.0.8"
 MERMAID_VERSION="10.9.3"
 SORTABLE_VERSION="1.15.6"
@@ -73,11 +73,12 @@ echo "  tailwindcss CLI"
 echo "========================="
 
 TAILWIND_BIN="$DIR/build/tailwindcss"
+mkdir -p "$DIR/build"
 case "$(uname -s)-$(uname -m)" in
 	Darwin-arm64) TAILWIND_ARCH="macos-arm64" ;;
 	Darwin-x86_64) TAILWIND_ARCH="macos-x64" ;;
-	Linux-aarch64) TAILWIND_ARCH="linux-arm64" ;;
-	*) TAILWIND_ARCH="linux-x64" ;;
+	Linux-aarch64) [ -f /lib/ld-musl-aarch64.so.1 ] && TAILWIND_ARCH="linux-arm64-musl" || TAILWIND_ARCH="linux-arm64" ;;
+	*)             [ -f /lib/ld-musl-x86_64.so.1 ]  && TAILWIND_ARCH="linux-x64-musl"   || TAILWIND_ARCH="linux-x64" ;;
 esac
 TAILWIND_URL="https://github.com/tailwindlabs/tailwindcss/releases/download/v${TAILWIND_CLI_VERSION}/tailwindcss-${TAILWIND_ARCH}"
 

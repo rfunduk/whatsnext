@@ -232,7 +232,7 @@ validate_image :: proc(content_type: string, data: []u8) -> (ext: string, ok: bo
 save_upload :: proc(step_id: i64, position: string, data: []u8, ext: string) -> (filename: string, ok: bool) {
 	filename = fmt.aprintf("%d_%s%s", step_id, position, ext)
 	full_path := fmt.tprintf("uploads/%s", filename)
-	if !os.write_entire_file(full_path, data) {
+	if write_err := os.write_entire_file(full_path, data); write_err != nil {
 		log.errorf("Failed to write upload file: %s", full_path)
 		return "", false
 	}
@@ -256,8 +256,8 @@ serve_upload :: proc(connection: mhd.Connection, path: string) -> mhd.Result {
 	}
 
 	full_path := fmt.tprintf("uploads/%s", path)
-	data, ok := os.read_entire_file(full_path)
-	if !ok { return respond(connection, .NOT_FOUND, "Not found\n", "text/plain") }
+	data, read_err := os.read_entire_file_from_path(full_path, context.allocator)
+	if read_err != nil { return respond(connection, .NOT_FOUND, "Not found\n", "text/plain") }
 
 	return respond(connection, .OK, string(data), guess_content_type(path))
 }
@@ -268,8 +268,8 @@ serve_static :: proc(connection: mhd.Connection, path: string) -> mhd.Result {
 	}
 
 	full_path := fmt.tprintf("static/%s", path)
-	data, ok := os.read_entire_file(full_path)
-	if !ok { return respond(connection, .NOT_FOUND, "Not found\n", "text/plain") }
+	data, read_err := os.read_entire_file_from_path(full_path, context.allocator)
+	if read_err != nil { return respond(connection, .NOT_FOUND, "Not found\n", "text/plain") }
 
 	return respond(connection, .OK, string(data), guess_content_type(path))
 }

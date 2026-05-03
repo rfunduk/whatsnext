@@ -4,7 +4,7 @@ import "core:c"
 
 HARU_LIB :: #config(HARU_LIB, "libhpdf.a")
 
-foreign import lib {HARU_LIB, "system:z", "system:png", "system:m"}
+foreign import lib {HARU_LIB, "system:png", "system:z", "system:m"}
 
 // --- Opaque handles ---
 

@@ -9,19 +9,19 @@ RUN apk add --no-cache \
     sqlite-dev sqlite-static
 
 # Odin compiler (glibc binary — needs gcompat to run on musl)
-ARG ODIN_VERSION=dev-2026-02
+ARG ODIN_VERSION=dev-2026-03
+ARG TARGETARCH
 RUN apk add --no-cache gcompat && \
-    curl -sL "https://github.com/odin-lang/Odin/releases/download/${ODIN_VERSION}/odin-linux-amd64-${ODIN_VERSION}.tar.gz" \
+    case "$TARGETARCH" in \
+      amd64) ODIN_ARCH=amd64 ;; \
+      arm64) ODIN_ARCH=arm64 ;; \
+      *) echo "unsupported arch: $TARGETARCH" && exit 1 ;; \
+    esac && \
+    curl -sL "https://github.com/odin-lang/Odin/releases/download/${ODIN_VERSION}/odin-linux-${ODIN_ARCH}-${ODIN_VERSION}.tar.gz" \
     | tar -xzf - -C /opt --strip-components=1 && \
     ln -s /opt/odin /usr/local/bin/odin
 
 WORKDIR /whatsnext
-
-# Tailwind standalone CLI: musl variant (bin/setup downloads glibc one)
-RUN mkdir -p build && \
-    curl -sL "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64-musl" \
-    -o build/tailwindcss && \
-    chmod +x build/tailwindcss
 
 # Vendor deps layer — only rebuilds when setup script or lib bindings change
 COPY bin/setup bin/setup
