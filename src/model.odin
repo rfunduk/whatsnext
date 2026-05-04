@@ -5,7 +5,6 @@ Story :: struct {
 	slug:          string,
 	title:         string,
 	description:   string,
-	published:     bool,
 	cover:         string,
 	password_hash: string,
 	chapter_view:  string,

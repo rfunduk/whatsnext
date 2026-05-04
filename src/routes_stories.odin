@@ -48,7 +48,6 @@ Story_Show_Page :: struct {
 	story_slug:        string,
 	story_title:       string,
 	story_description: string,
-	published:         bool,
 	steps:             []Step_View,
 	has_breadcrumbs:   bool,
 	bc_story_title:    string,
@@ -99,7 +98,6 @@ route_story_show :: proc(connection: mhd.Connection, story_slug: string) -> mhd.
 		story_slug        = story.slug,
 		story_title       = story.title,
 		story_description = story.description,
-		published         = story.published,
 		steps             = ordered,
 		has_breadcrumbs   = true,
 		bc_story_title    = bc_title,
@@ -221,7 +219,6 @@ Story_Settings_Data :: struct {
 	story_slug: string,
 	story_name: string,
 	slug:       string,
-	published:  bool,
 	error:      string,
 }
 
@@ -236,7 +233,6 @@ route_story_settings :: proc(connection: mhd.Connection, story_slug: string) -> 
 		story_slug = story.slug,
 		story_name = story_name,
 		slug       = story.slug,
-		published  = story.published,
 	}
 
 	html, tmpl_ok := render_partial("_story_settings", data)
@@ -250,18 +246,14 @@ route_save_settings :: proc(connection: mhd.Connection, story_slug: string, pc: 
 	story, ok := db_get_story_by_slug(story_slug)
 	if !ok { return respond(connection, .NOT_FOUND, "Story not found\n", "text/plain") }
 
-	published_str := post_value(pc, "published")
-	published := published_str == "1"
-	db_update_published(story.id, published)
-
 	new_slug := post_value(pc, "slug")
 	redirect_slug := story.slug
 	if len(new_slug) > 0 && new_slug != story.slug {
 		if !is_valid_slug(new_slug) {
-			return render_settings_error(connection, story, new_slug, published, "Only lowercase letters, numbers, and dashes allowed.")
+			return render_settings_error(connection, story, new_slug, "Only lowercase letters, numbers, and dashes allowed.")
 		}
 		if !db_update_story_slug(story.id, new_slug) {
-			return render_settings_error(connection, story, new_slug, published, "That slug is already taken.")
+			return render_settings_error(connection, story, new_slug, "That slug is already taken.")
 		}
 		redirect_slug = new_slug
 	}
@@ -270,7 +262,7 @@ route_save_settings :: proc(connection: mhd.Connection, story_slug: string, pc: 
 	return respond(connection, .OK, body)
 }
 
-render_settings_error :: proc(connection: mhd.Connection, story: Story, slug: string, published: bool, error: string) -> mhd.Result {
+render_settings_error :: proc(connection: mhd.Connection, story: Story, slug: string, error: string) -> mhd.Result {
 	story_name := story.title
 	if len(story_name) == 0 { story_name = DEFAULT_STORY_TITLE }
 
@@ -278,7 +270,6 @@ render_settings_error :: proc(connection: mhd.Connection, story: Story, slug: st
 		story_slug = story.slug,
 		story_name = story_name,
 		slug       = slug,
-		published  = published,
 		error      = error,
 	}
 

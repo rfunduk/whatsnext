@@ -220,7 +220,7 @@ db_list_stories :: proc() -> [dynamic]Story {
 	query, status := sqlite.sql_bind(
 		db,
 		`
-			SELECT id, slug, title, description, published, cover,
+			SELECT id, slug, title, description, cover,
 					password_hash, chapter_view,
 					created_at, updated_at
 			FROM stories
@@ -234,7 +234,7 @@ db_list_stories :: proc() -> [dynamic]Story {
 
 db_get_story :: proc(id: i64) -> (Story, bool) {
 	return sqlite.sql_one(db, `
-		SELECT id, slug, title, description, published, cover, password_hash,
+		SELECT id, slug, title, description, cover, password_hash,
 				chapter_view, created_at, updated_at
 		FROM stories
 		WHERE id = ?
@@ -243,7 +243,7 @@ db_get_story :: proc(id: i64) -> (Story, bool) {
 
 db_get_story_by_slug :: proc(slug: string) -> (Story, bool) {
 	return sqlite.sql_one(db, `
-		SELECT id, slug, title, description, published, cover, password_hash,
+		SELECT id, slug, title, description, cover, password_hash,
 				chapter_view, created_at, updated_at
 		FROM stories
 		WHERE slug = ?
@@ -631,19 +631,6 @@ db_get_choices_for_step :: proc(
 	}
 
 	return
-}
-
-db_update_published :: proc(id: i64, published: bool) -> bool {
-	status := sqlite.sql_exec(db, `
-		UPDATE stories
-		SET published = ?, updated_at = datetime('now')
-		WHERE id = ?
-	`, published ? i64(1) : i64(0), id)
-	if status != nil {
-		log.errorf("Failed to update published: %s", sqlite.status_explain(status))
-		return false
-	}
-	return true
 }
 
 db_update_story_slug :: proc(id: i64, slug: string) -> bool {
