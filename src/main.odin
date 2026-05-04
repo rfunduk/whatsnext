@@ -51,7 +51,9 @@ main :: proc() {
 		db_path: string `args:"pos=0" usage:"Path to SQLite database file."`,
 	}
 
-	opt := Options{db_path = "whatsnext.db"}
+	opt := Options {
+		db_path = "whatsnext.db",
+	}
 	flags.parse_or_exit(&opt, os.args)
 
 	os.make_directory("uploads")

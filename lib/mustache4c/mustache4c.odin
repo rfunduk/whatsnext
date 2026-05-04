@@ -297,8 +297,12 @@ process_template :: proc(t: Template, provider: ^m.Data_Provider, provider_data:
 // --- Public API ---
 
 compile :: proc(template_str: string) -> Template {
-	pd := Provider_Data{ctx = context}
-	parser := m.Parser{parse_error = cb_parse_error}
+	pd := Provider_Data {
+		ctx = context,
+	}
+	parser := m.Parser {
+		parse_error = cb_parse_error,
+	}
 	return m.compile(raw_data(template_str), len(template_str), &parser, &pd, 0)
 }
 
@@ -347,7 +351,10 @@ render_in_layout :: proc(
 	data: any,
 	layout_tmpl: Template,
 	compiled_partials: map[string]Template,
-) -> (string, bool) {
+) -> (
+	string,
+	bool,
+) {
 	// Pass 1: render the page template.
 	page_content, ok := render(t, data, compiled_partials)
 	if !ok { return "", false }
@@ -356,7 +363,7 @@ render_in_layout :: proc(
 	root := new(any)
 	root^ = data
 	lpd := Layout_Provider_Data {
-		base    = Provider_Data{root = root, ctx = context, partials = compiled_partials},
+		base = Provider_Data{root = root, ctx = context, partials = compiled_partials},
 		content = page_content,
 	}
 	provider := m.Data_Provider {

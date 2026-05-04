@@ -117,33 +117,60 @@ utf8_to_win1252 :: proc(r: rune) -> (u8, bool) {
 
 	// Windows-1252 specials in the 0x80..0x9F range
 	switch r {
-	case 0x20AC: return 0x80, true // euro sign
-	case 0x201A: return 0x82, true // single low-9 quote
-	case 0x0192: return 0x83, true // f with hook
-	case 0x201E: return 0x84, true // double low-9 quote
-	case 0x2026: return 0x85, true // ellipsis
-	case 0x2020: return 0x86, true // dagger
-	case 0x2021: return 0x87, true // double dagger
-	case 0x02C6: return 0x88, true // circumflex
-	case 0x2030: return 0x89, true // per mille
-	case 0x0160: return 0x8A, true // S caron
-	case 0x2039: return 0x8B, true // single left angle quote
-	case 0x0152: return 0x8C, true // OE ligature
-	case 0x017D: return 0x8E, true // Z caron
-	case 0x2018: return 0x91, true // left single quote
-	case 0x2019: return 0x92, true // right single quote
-	case 0x201C: return 0x93, true // left double quote
-	case 0x201D: return 0x94, true // right double quote
-	case 0x2022: return 0x95, true // bullet
-	case 0x2013: return 0x96, true // en dash
-	case 0x2014: return 0x97, true // em dash
-	case 0x02DC: return 0x98, true // tilde
-	case 0x2122: return 0x99, true // trademark
-	case 0x0161: return 0x9A, true // s caron
-	case 0x203A: return 0x9B, true // single right angle quote
-	case 0x0153: return 0x9C, true // oe ligature
-	case 0x017E: return 0x9E, true // z caron
-	case 0x0178: return 0x9F, true // Y diaeresis
+	case 0x20AC:
+		return 0x80, true // euro sign
+	case 0x201A:
+		return 0x82, true // single low-9 quote
+	case 0x0192:
+		return 0x83, true // f with hook
+	case 0x201E:
+		return 0x84, true // double low-9 quote
+	case 0x2026:
+		return 0x85, true // ellipsis
+	case 0x2020:
+		return 0x86, true // dagger
+	case 0x2021:
+		return 0x87, true // double dagger
+	case 0x02C6:
+		return 0x88, true // circumflex
+	case 0x2030:
+		return 0x89, true // per mille
+	case 0x0160:
+		return 0x8A, true // S caron
+	case 0x2039:
+		return 0x8B, true // single left angle quote
+	case 0x0152:
+		return 0x8C, true // OE ligature
+	case 0x017D:
+		return 0x8E, true // Z caron
+	case 0x2018:
+		return 0x91, true // left single quote
+	case 0x2019:
+		return 0x92, true // right single quote
+	case 0x201C:
+		return 0x93, true // left double quote
+	case 0x201D:
+		return 0x94, true // right double quote
+	case 0x2022:
+		return 0x95, true // bullet
+	case 0x2013:
+		return 0x96, true // en dash
+	case 0x2014:
+		return 0x97, true // em dash
+	case 0x02DC:
+		return 0x98, true // tilde
+	case 0x2122:
+		return 0x99, true // trademark
+	case 0x0161:
+		return 0x9A, true // s caron
+	case 0x203A:
+		return 0x9B, true // single right angle quote
+	case 0x0153:
+		return 0x9C, true // oe ligature
+	case 0x017E:
+		return 0x9E, true // z caron
+	case 0x0178:
+		return 0x9F, true // Y diaeresis
 	}
 	return 0, false
 }
@@ -474,13 +501,16 @@ pdf_compute_layout :: proc(story: Story, steps: []Step, choices: []Choice) -> [d
 					y = TOP_MARGIN + PAGE_NUM_SIZE * 3
 				}
 
-				append(&page.lines, Pdf_Line {
-					x            = m_left,
-					y            = y,
-					image_path   = img_path,
-					image_width  = content_width,
-					image_height = draw_h,
-				})
+				append(
+					&page.lines,
+					Pdf_Line {
+						x = m_left,
+						y = y,
+						image_path = img_path,
+						image_width = content_width,
+						image_height = draw_h,
+					},
+				)
 				y += draw_h + OFFSET_BETWEEN
 			}
 		}
@@ -552,13 +582,16 @@ pdf_compute_layout :: proc(story: Story, steps: []Step, choices: []Choice) -> [d
 					y = TOP_MARGIN + PAGE_NUM_SIZE * 3
 				}
 
-				append(&page.lines, Pdf_Line {
-					x            = m_left,
-					y            = y,
-					image_path   = img_path,
-					image_width  = content_width,
-					image_height = draw_h,
-				})
+				append(
+					&page.lines,
+					Pdf_Line {
+						x = m_left,
+						y = y,
+						image_path = img_path,
+						image_width = content_width,
+						image_height = draw_h,
+					},
+				)
 				y += draw_h + OFFSET_BETWEEN
 			}
 		}
@@ -640,16 +673,8 @@ pdf_compute_layout :: proc(story: Story, steps: []Step, choices: []Choice) -> [d
 				full_text := pdf_to_win1252(fmt.aprintf("%s, go to page %d", choice.prompt, dest_display))
 				wrapped := pdf_wrap_text(fonts.choice, CHOICE_SIZE, full_text, choice_avail_width)
 				for line, li in wrapped {
-				x := CHOICE_INDENT + (CHOICE_SIZE if li > 0 else 0)
-					append(
-						&last_page.lines,
-						Pdf_Line {
-							text = line,
-							font = .Choice,
-							x    = x,
-							y    = y,
-						},
-					)
+					x := CHOICE_INDENT + (CHOICE_SIZE if li > 0 else 0)
+					append(&last_page.lines, Pdf_Line{text = line, font = .Choice, x = x, y = y})
 					y += choice_line_height
 				}
 			}
@@ -665,12 +690,15 @@ pdf_compute_layout :: proc(story: Story, steps: []Step, choices: []Choice) -> [d
 	// add 2 blank pages so the booklet back cover is blank.
 	if len(pages) % 2 == 0 && len(pages) > 0 && len(pages[len(pages) - 1].lines) > 0 {
 		for _ in 0 ..< 2 {
-			append(&pages, Pdf_Page {
-				lines        = make([dynamic]Pdf_Line),
-				display_num  = 0,
-				margin_left  = OUTER_MARGIN,
-				margin_right = BINDING_MARGIN,
-			})
+			append(
+				&pages,
+				Pdf_Page {
+					lines = make([dynamic]Pdf_Line),
+					display_num = 0,
+					margin_left = OUTER_MARGIN,
+					margin_right = BINDING_MARGIN,
+				},
+			)
 		}
 	}
 
@@ -761,7 +789,13 @@ pdf_render_booklet :: proc(pages: []Pdf_Page) -> []u8 {
 	return pdf_doc_to_bytes(doc)
 }
 
-pdf_render_booklet_slot :: proc(page: ^haru.Page, fonts: Haru_Fonts, lpage: Pdf_Page, x_offset: f32, doc: ^haru.Doc) {
+pdf_render_booklet_slot :: proc(
+	page: ^haru.Page,
+	fonts: Haru_Fonts,
+	lpage: Pdf_Page,
+	x_offset: f32,
+	doc: ^haru.Doc,
+) {
 	if lpage.display_num > 0 {
 		pdf_render_page_number(page, fonts, lpage.display_num, x_offset)
 	}
@@ -821,9 +855,12 @@ pdf_render_line :: proc(
 				// Convert top-down y to libharu bottom-left origin
 				y := A5_HEIGHT - line.y - line.image_height
 				haru.Page_DrawImage(
-					page, image,
-					haru.Real(x), haru.Real(y),
-					haru.Real(line.image_width), haru.Real(line.image_height),
+					page,
+					image,
+					haru.Real(x),
+					haru.Real(y),
+					haru.Real(line.image_width),
+					haru.Real(line.image_height),
 				)
 			}
 		}

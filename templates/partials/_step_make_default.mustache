@@ -1,0 +1,16 @@
+<script>me('#modal').showModal()</script>
+<div class="p-6">
+  <h3 class="text-lg font-semibold mb-3">Make &ldquo;{{step_name}}&rdquo; the default chapter?</h3>
+  <p class="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
+    The default chapter is the entry point of the story &mdash; readers start
+    here, and it&rsquo;s the first page when exporting a PDF.
+    &ldquo;{{current_default}}&rdquo; will no longer be the default.
+  </p>
+
+  <form method="POST" action="/stories/{{story_slug}}/steps/{{step_slug}}/make-default">
+    <div class="flex justify-end gap-3">
+      <button type="button" class="btn-secondary" onclick="me('#modal').close()">cancel</button>
+      <button type="submit" class="btn-sm">make default</button>
+    </div>
+  </form>
+</div>

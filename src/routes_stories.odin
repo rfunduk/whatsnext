@@ -32,12 +32,7 @@ route_create_story :: proc(connection: mhd.Connection) -> mhd.Result {
 	}
 	_, step_ok := db_create_default_step(story_id)
 	if !step_ok {
-		return respond(
-			connection,
-			.INTERNAL_SERVER_ERROR,
-			"Failed to create default step\n",
-			"text/plain",
-		)
+		return respond(connection, .INTERNAL_SERVER_ERROR, "Failed to create default step\n", "text/plain")
 	}
 	location := strings.clone_to_cstring(fmt.aprintf("/stories/%s", story_slug))
 	return redirect(connection, location)
@@ -127,7 +122,11 @@ route_save_story :: proc(connection: mhd.Connection, story_slug: string, pc: ^Po
 	return redirect(connection, location)
 }
 
-route_update_chapter_view :: proc(connection: mhd.Connection, story_slug: string, pc: ^Post_Context) -> mhd.Result {
+route_update_chapter_view :: proc(
+	connection: mhd.Connection,
+	story_slug: string,
+	pc: ^Post_Context,
+) -> mhd.Result {
 	story, ok := db_get_story_by_slug(story_slug)
 	if !ok {
 		return respond(connection, .NOT_FOUND, "Story not found\n", "text/plain")
@@ -242,7 +241,11 @@ route_story_settings :: proc(connection: mhd.Connection, story_slug: string) -> 
 	return respond(connection, .OK, html)
 }
 
-route_save_settings :: proc(connection: mhd.Connection, story_slug: string, pc: ^Post_Context) -> mhd.Result {
+route_save_settings :: proc(
+	connection: mhd.Connection,
+	story_slug: string,
+	pc: ^Post_Context,
+) -> mhd.Result {
 	story, ok := db_get_story_by_slug(story_slug)
 	if !ok { return respond(connection, .NOT_FOUND, "Story not found\n", "text/plain") }
 
@@ -250,7 +253,12 @@ route_save_settings :: proc(connection: mhd.Connection, story_slug: string, pc: 
 	redirect_slug := story.slug
 	if len(new_slug) > 0 && new_slug != story.slug {
 		if !is_valid_slug(new_slug) {
-			return render_settings_error(connection, story, new_slug, "Only lowercase letters, numbers, and dashes allowed.")
+			return render_settings_error(
+				connection,
+				story,
+				new_slug,
+				"Only lowercase letters, numbers, and dashes allowed.",
+			)
 		}
 		if !db_update_story_slug(story.id, new_slug) {
 			return render_settings_error(connection, story, new_slug, "That slug is already taken.")
@@ -258,11 +266,19 @@ route_save_settings :: proc(connection: mhd.Connection, story_slug: string, pc: 
 		redirect_slug = new_slug
 	}
 
-	body := fmt.aprintf(`<script>me('#modal').close();window.location='/stories/%s';</script>`, redirect_slug)
+	body := fmt.aprintf(
+		`<script>me('#modal').close();window.location='/stories/%s';</script>`,
+		redirect_slug,
+	)
 	return respond(connection, .OK, body)
 }
 
-render_settings_error :: proc(connection: mhd.Connection, story: Story, slug: string, error: string) -> mhd.Result {
+render_settings_error :: proc(
+	connection: mhd.Connection,
+	story: Story,
+	slug: string,
+	error: string,
+) -> mhd.Result {
 	story_name := story.title
 	if len(story_name) == 0 { story_name = DEFAULT_STORY_TITLE }
 

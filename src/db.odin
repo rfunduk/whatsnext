@@ -53,11 +53,11 @@ db_run_migrations :: proc() -> bool {
 	status := sqlite.sql_exec(
 		db,
 		`
-		CREATE TABLE IF NOT EXISTS _migrations (
-			name       TEXT PRIMARY KEY,
-			applied_at TEXT NOT NULL DEFAULT (datetime('now'))
-		)
-	`,
+			CREATE TABLE IF NOT EXISTS _migrations (
+				name       TEXT PRIMARY KEY,
+				applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+			)
+		`,
 	)
 	if status != nil {
 		log.errorf("Failed to create _migrations table: %s", sqlite.status_explain(status))
@@ -69,7 +69,9 @@ db_run_migrations :: proc() -> bool {
 	count_row, count_ok := sqlite.sql_one(db, `
 		SELECT COUNT(*)
 		FROM _migrations
-	`, struct { count: i64 })
+	`, struct {
+			count: i64,
+		})
 	is_fresh := !count_ok || count_row.count == 0
 
 	// Read migrations directory
@@ -103,9 +105,9 @@ db_run_migrations :: proc() -> bool {
 			status = sqlite.sql_exec(
 				db,
 				`
-				INSERT OR IGNORE INTO _migrations (name)
-				VALUES (?)
-			`,
+					INSERT OR IGNORE INTO _migrations (name)
+					VALUES (?)
+				`,
 				entry.name,
 			)
 			if status != nil {
@@ -117,11 +119,18 @@ db_run_migrations :: proc() -> bool {
 		}
 
 		// Check if already applied
-		check_row, check_ok := sqlite.sql_one(db, `
-			SELECT COUNT(*)
-			FROM _migrations
-			WHERE name = ?
-		`, struct { count: i64 }, entry.name)
+		check_row, check_ok := sqlite.sql_one(
+			db,
+			`
+				SELECT COUNT(*)
+				FROM _migrations
+				WHERE name = ?
+			`,
+			struct {
+				count: i64,
+			},
+			entry.name,
+		)
 		already_applied := check_ok && check_row.count > 0
 
 		if already_applied {
@@ -174,7 +183,9 @@ db_backfill_slugs :: proc() -> bool {
 	for {
 		row, ok := sqlite.sql_one(db, `
 			SELECT id FROM stories WHERE slug = '' LIMIT 1
-		`, struct { id: i64 })
+		`, struct {
+				id: i64,
+			})
 		if !ok { break }
 		slug := generate_slug()
 		s := sqlite.sql_exec(db, `UPDATE stories SET slug = ? WHERE id = ?`, slug, row.id)
@@ -189,7 +200,9 @@ db_backfill_slugs :: proc() -> bool {
 	for {
 		row, ok := sqlite.sql_one(db, `
 			SELECT id FROM steps WHERE slug = '' LIMIT 1
-		`, struct { id: i64 })
+		`, struct {
+				id: i64,
+			})
 		if !ok { break }
 		slug := generate_slug()
 		s := sqlite.sql_exec(db, `UPDATE steps SET slug = ? WHERE id = ?`, slug, row.id)
@@ -201,10 +214,10 @@ db_backfill_slugs :: proc() -> bool {
 	}
 
 	// Create unique indexes after all slugs are populated
-	for sql in ([?]string{
-		`CREATE UNIQUE INDEX IF NOT EXISTS idx_stories_slug ON stories(slug)`,
-		`CREATE UNIQUE INDEX IF NOT EXISTS idx_steps_slug ON steps(slug)`,
-	}) {
+	for sql in ([?]string {
+			`CREATE UNIQUE INDEX IF NOT EXISTS idx_stories_slug ON stories(slug)`,
+			`CREATE UNIQUE INDEX IF NOT EXISTS idx_steps_slug ON steps(slug)`,
+		}) {
 		status := sqlite.sql_exec(db, sql)
 		if status != nil {
 			log.errorf("Failed to create slug index: %s", sqlite.status_explain(status))
@@ -233,31 +246,46 @@ db_list_stories :: proc() -> [dynamic]Story {
 }
 
 db_get_story :: proc(id: i64) -> (Story, bool) {
-	return sqlite.sql_one(db, `
-		SELECT id, slug, title, description, cover, password_hash,
-				chapter_view, created_at, updated_at
-		FROM stories
-		WHERE id = ?
-	`, Story, id)
+	return sqlite.sql_one(
+		db,
+		`
+			SELECT id, slug, title, description, cover, password_hash,
+					chapter_view, created_at, updated_at
+			FROM stories
+			WHERE id = ?
+		`,
+		Story,
+		id,
+	)
 }
 
 db_get_story_by_slug :: proc(slug: string) -> (Story, bool) {
-	return sqlite.sql_one(db, `
-		SELECT id, slug, title, description, cover, password_hash,
-				chapter_view, created_at, updated_at
-		FROM stories
-		WHERE slug = ?
-	`, Story, slug)
+	return sqlite.sql_one(
+		db,
+		`
+			SELECT id, slug, title, description, cover, password_hash,
+					chapter_view, created_at, updated_at
+			FROM stories
+			WHERE slug = ?
+		`,
+		Story,
+		slug,
+	)
 }
 
 db_get_step_by_slug :: proc(slug: string) -> (Step, bool) {
-	return sqlite.sql_one(db, `
-		SELECT id, slug, story_id, content, internal_name,
-				image_top, image_bottom, is_default,
-				created_at, updated_at
-		FROM steps
-		WHERE slug = ?
-	`, Step, slug)
+	return sqlite.sql_one(
+		db,
+		`
+			SELECT id, slug, story_id, content, internal_name,
+					image_top, image_bottom, is_default,
+					created_at, updated_at
+			FROM steps
+			WHERE slug = ?
+		`,
+		Step,
+		slug,
+	)
 }
 
 db_list_steps :: proc(story_id: i64) -> [dynamic]Step {
@@ -300,11 +328,19 @@ db_list_choices :: proc(story_id: i64) -> [dynamic]Choice {
 db_create_step :: proc(story_id: i64) -> (i64, string, bool) {
 	for _ in 0 ..< 10 {
 		slug := generate_slug()
-		row, ok := sqlite.sql_one(db, `
-			INSERT INTO steps (story_id, slug)
-			VALUES (?, ?)
-			RETURNING id
-		`, struct { id: i64 }, story_id, slug)
+		row, ok := sqlite.sql_one(
+			db,
+			`
+				INSERT INTO steps (story_id, slug)
+				VALUES (?, ?)
+				RETURNING id
+			`,
+			struct {
+				id: i64,
+			},
+			story_id,
+			slug,
+		)
 		if ok {
 			return row.id, slug, true
 		}
@@ -371,11 +407,19 @@ db_delete_story :: proc(id: i64) -> bool {
 db_create_story :: proc() -> (i64, string, bool) {
 	for _ in 0 ..< 10 {
 		slug := generate_slug()
-		row, ok := sqlite.sql_one(db, `
-			INSERT INTO stories (slug, chapter_view)
-			VALUES (?, ?)
-			RETURNING id
-		`, struct { id: i64 }, slug, DEFAULT_CHAPTER_VIEW)
+		row, ok := sqlite.sql_one(
+			db,
+			`
+				INSERT INTO stories (slug, chapter_view)
+				VALUES (?, ?)
+				RETURNING id
+			`,
+			struct {
+				id: i64,
+			},
+			slug,
+			DEFAULT_CHAPTER_VIEW,
+		)
 		if ok {
 			return row.id, slug, true
 		}
@@ -388,11 +432,19 @@ db_create_story :: proc() -> (i64, string, bool) {
 db_create_default_step :: proc(story_id: i64) -> (string, bool) {
 	for _ in 0 ..< 10 {
 		slug := generate_slug()
-		_, ok := sqlite.sql_one(db, `
-			INSERT INTO steps (story_id, slug, is_default)
-			VALUES (?, ?, 1)
-			RETURNING id
-		`, struct { id: i64 }, story_id, slug)
+		_, ok := sqlite.sql_one(
+			db,
+			`
+				INSERT INTO steps (story_id, slug, is_default)
+				VALUES (?, ?, 1)
+				RETURNING id
+			`,
+			struct {
+				id: i64,
+			},
+			story_id,
+			slug,
+		)
 		if ok {
 			return slug, true
 		}
@@ -403,13 +455,18 @@ db_create_default_step :: proc(story_id: i64) -> (string, bool) {
 }
 
 db_get_step :: proc(step_id: i64) -> (Step, bool) {
-	return sqlite.sql_one(db, `
-		SELECT id, slug, story_id, content, internal_name,
-				image_top, image_bottom, is_default,
-				created_at, updated_at
-		FROM steps
-		WHERE id = ?
-	`, Step, step_id)
+	return sqlite.sql_one(
+		db,
+		`
+			SELECT id, slug, story_id, content, internal_name,
+					image_top, image_bottom, is_default,
+					created_at, updated_at
+			FROM steps
+			WHERE id = ?
+		`,
+		Step,
+		step_id,
+	)
 }
 
 db_update_step :: proc(step_id: i64, internal_name: string, content: string) -> bool {
@@ -439,7 +496,9 @@ db_create_choice :: proc(story_id, source_step_id, dest_step_id: i64, prompt: st
 			VALUES (?, ?, ?, ?, COALESCE((SELECT MAX(ord) FROM choices WHERE source_step_id = ?), -1) + 1)
 			RETURNING id
 		`,
-		struct { id: i64 },
+		struct {
+			id: i64,
+		},
 		story_id,
 		source_step_id,
 		dest_step_id,
@@ -473,15 +532,16 @@ db_update_choice :: proc(choice_id: i64, step_id: i64, prompt: string) -> bool {
 }
 
 db_update_step_image :: proc(step_id: i64, position: string, filename: string) -> bool {
-	sql := position == "top" ? `
-		UPDATE steps
-		SET image_top = ?, updated_at = datetime('now')
-		WHERE id = ?
-	` : `
-		UPDATE steps
-		SET image_bottom = ?, updated_at = datetime('now')
-		WHERE id = ?
-	`
+	sql :=
+		position == "top" ? `
+			UPDATE steps
+			SET image_top = ?, updated_at = datetime('now')
+			WHERE id = ?
+		` : `
+			UPDATE steps
+			SET image_bottom = ?, updated_at = datetime('now')
+			WHERE id = ?
+		`
 	status := sqlite.sql_exec(db, sql, filename, step_id)
 	if status != nil {
 		log.errorf("Failed to update step image: %s", sqlite.status_explain(status))
@@ -510,10 +570,15 @@ db_delete_step :: proc(step_id: i64) -> bool {
 }
 
 db_delete_choice :: proc(choice_id: i64, step_id: i64) -> bool {
-	status := sqlite.sql_exec(db, `
-		DELETE FROM choices
-		WHERE id = ? AND source_step_id = ?
-	`, choice_id, step_id)
+	status := sqlite.sql_exec(
+		db,
+		`
+			DELETE FROM choices
+			WHERE id = ? AND source_step_id = ?
+		`,
+		choice_id,
+		step_id,
+	)
 	if status != nil {
 		log.errorf("Failed to delete choice: %s", sqlite.status_explain(status))
 		return false
@@ -522,13 +587,56 @@ db_delete_choice :: proc(choice_id: i64, step_id: i64) -> bool {
 }
 
 // Set ord = index for each choice ID in the given order, scoped to source_step_id.
+db_set_default_step :: proc(story_id: i64, step_id: i64) -> bool {
+	if status := sqlite.sql_exec(db, `BEGIN`); status != nil {
+		log.errorf("Failed to begin tx: %s", sqlite.status_explain(status))
+		return false
+	}
+	if status := sqlite.sql_exec(
+		db,
+		`
+			UPDATE steps SET is_default = 0, updated_at = datetime('now')
+			WHERE story_id = ? AND is_default = 1
+		`,
+		story_id,
+	); status != nil {
+		log.errorf("Failed to clear default: %s", sqlite.status_explain(status))
+		sqlite.sql_exec(db, `ROLLBACK`)
+		return false
+	}
+	if status := sqlite.sql_exec(
+		db,
+		`
+			UPDATE steps SET is_default = 1, updated_at = datetime('now')
+			WHERE id = ? AND story_id = ?
+		`,
+		step_id,
+		story_id,
+	); status != nil {
+		log.errorf("Failed to set default: %s", sqlite.status_explain(status))
+		sqlite.sql_exec(db, `ROLLBACK`)
+		return false
+	}
+	if status := sqlite.sql_exec(db, `COMMIT`); status != nil {
+		log.errorf("Failed to commit tx: %s", sqlite.status_explain(status))
+		return false
+	}
+	return true
+}
+
 db_reorder_choices :: proc(step_id: i64, choice_ids: []i64) -> bool {
 	for id, idx in choice_ids {
-		status := sqlite.sql_exec(db, `
-			UPDATE choices
-			SET ord = ?
-			WHERE id = ? AND source_step_id = ?
-		`, i64(idx), id, step_id)
+		status := sqlite.sql_exec(
+			db,
+			`
+				UPDATE choices
+				SET ord = ?
+				WHERE id = ? AND source_step_id = ?
+			`,
+			i64(idx),
+			id,
+			step_id,
+		)
 		if status != nil {
 			log.errorf("Failed to reorder choice %d: %s", id, sqlite.status_explain(status))
 			return false
@@ -634,11 +742,16 @@ db_get_choices_for_step :: proc(
 }
 
 db_update_story_slug :: proc(id: i64, slug: string) -> bool {
-	status := sqlite.sql_exec(db, `
-		UPDATE stories
-		SET slug = ?, updated_at = datetime('now')
-		WHERE id = ?
-	`, slug, id)
+	status := sqlite.sql_exec(
+		db,
+		`
+			UPDATE stories
+			SET slug = ?, updated_at = datetime('now')
+			WHERE id = ?
+		`,
+		slug,
+		id,
+	)
 	if status != nil {
 		log.errorf("Failed to update story slug: %s", sqlite.status_explain(status))
 		return false

@@ -55,8 +55,20 @@ pre.mermaid svg {
 }
 
 /* Mermaid flowchart node overrides */
+.mermaid .node.defaultStep polygon,
+.mermaid .node.defaultStep path {
+  stroke: #bbbbbb !important;
+}
+
 @media (prefers-color-scheme: dark) {
-  .mermaid .node rect {
+  .mermaid .node.defaultStep polygon,
+  .mermaid .node.defaultStep path {
+    stroke: #525252 !important;
+  }
+
+  .mermaid .node rect,
+  .mermaid .node polygon,
+  .mermaid .node path {
     fill: #262626 !important;
     stroke: #404040 !important;
   }

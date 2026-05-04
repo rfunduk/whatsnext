@@ -179,6 +179,12 @@ handle_request :: proc "c" (
 						}
 						return route_step_delete_confirm(connection, story_slug, step_slug)
 					}
+					if step_sub == "/make-default" {
+						if method_str == "POST" {
+							return route_make_default_step(connection, story_slug, step_slug)
+						}
+						return route_step_make_default_confirm(connection, story_slug, step_slug)
+					}
 					if step_sub == "/choices" && method_str == "POST" {
 						return route_create_choice(connection, story_slug, step_slug, pc)
 					}

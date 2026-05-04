@@ -229,7 +229,15 @@ validate_image :: proc(content_type: string, data: []u8) -> (ext: string, ok: bo
 	return "", false
 }
 
-save_upload :: proc(step_id: i64, position: string, data: []u8, ext: string) -> (filename: string, ok: bool) {
+save_upload :: proc(
+	step_id: i64,
+	position: string,
+	data: []u8,
+	ext: string,
+) -> (
+	filename: string,
+	ok: bool,
+) {
 	filename = fmt.aprintf("%d_%s%s", step_id, position, ext)
 	full_path := fmt.tprintf("uploads/%s", filename)
 	if write_err := os.write_entire_file(full_path, data); write_err != nil {
@@ -302,6 +310,18 @@ guess_content_type :: proc(path: string) -> cstring {
 build_flowchart_defn :: proc(story_slug: string, steps: []Step, choices: []Choice) -> string {
 	if len(steps) == 0 { return "" }
 
+	default_id: i64 = -1
+	for step in steps {
+		if step.is_default { default_id = step.id; break }
+	}
+
+	incoming := make(map[i64]bool)
+	for c in choices { incoming[c.dest_step_id] = true }
+	orphan := make(map[i64]bool)
+	for s in steps {
+		if !s.is_default && s.id not_in incoming { orphan[s.id] = true }
+	}
+
 	b := strings.builder_make()
 
 	strings.write_string(&b, `%%{init:{'theme':'base','themeVariables':{`)
@@ -317,31 +337,41 @@ build_flowchart_defn :: proc(story_slug: string, steps: []Step, choices: []Choic
 	added := make(map[i64]bool)
 
 	// Default step first
-	for step in steps {
-		if step.is_default {
-			fc_node(&b, step.id, step.internal_name)
-			strings.write_byte(&b, '\n')
-			added[step.id] = true
-			break
-		}
+	if default_id >= 0 {
+		name := fc_step_name(steps, default_id)
+		fc_node(&b, default_id, name, true, false)
+		strings.write_byte(&b, '\n')
+		added[default_id] = true
 	}
 
 	// Edges from choices
 	for choice in choices {
 		src_name := fc_step_name(steps, choice.source_step_id)
 		dst_name := fc_step_name(steps, choice.dest_step_id)
-		fc_node(&b, choice.source_step_id, src_name)
+		fc_node(
+			&b,
+			choice.source_step_id,
+			src_name,
+			choice.source_step_id == default_id,
+			choice.source_step_id in orphan,
+		)
 		strings.write_string(&b, " --> ")
-		fc_node(&b, choice.dest_step_id, dst_name)
+		fc_node(
+			&b,
+			choice.dest_step_id,
+			dst_name,
+			choice.dest_step_id == default_id,
+			choice.dest_step_id in orphan,
+		)
 		strings.write_byte(&b, '\n')
 		added[choice.source_step_id] = true
 		added[choice.dest_step_id] = true
 	}
 
-	// Orphan steps
+	// Unreached steps (incl. orphans)
 	for step in steps {
 		if step.id not_in added {
-			fc_node(&b, step.id, step.internal_name)
+			fc_node(&b, step.id, step.internal_name, step.id == default_id, step.id in orphan)
 			strings.write_byte(&b, '\n')
 		}
 	}
@@ -351,14 +381,42 @@ build_flowchart_defn :: proc(story_slug: string, steps: []Step, choices: []Choic
 		fmt.sbprintf(&b, "click %d href \"/stories/%s/steps/%s\"\n", step.id, story_slug, step.slug)
 	}
 
+	// Default step. Stroke colour set in CSS per mode.
+	if default_id >= 0 {
+		strings.write_string(&b, "classDef defaultStep stroke-width:1px\n")
+		fmt.sbprintf(&b, "class %d defaultStep\n", default_id)
+	}
+
+	// Orphan steps: dashed border.
+	if len(orphan) > 0 {
+		strings.write_string(&b, "classDef orphanStep stroke-dasharray:5 3\n")
+		for id in orphan {
+			fmt.sbprintf(&b, "class %d orphanStep\n", id)
+		}
+	}
+
 	return strings.to_string(b)
 }
 
-// Write a mermaid node: id["label"]
-fc_node :: proc(b: ^strings.Builder, id: i64, name: string) {
+// Write a mermaid node. Default uses stadium shape `(["..."])` to mark entry point.
+// Orphans get a red bold ∗ prefix in the label (sized correctly by mermaid).
+fc_node :: proc(b: ^strings.Builder, id: i64, name: string, is_default: bool, is_orphan: bool) {
 	label := name
 	if len(label) == 0 { label = DEFAULT_STEP_NAME }
-	fmt.sbprintf(b, "%d[\"", id)
+	open_shape, close_shape: string
+	switch {
+	case is_default:
+		open_shape, close_shape = "{{\"", "\"}}"
+	case:
+		open_shape, close_shape = "[\"", "\"]"
+	}
+	fmt.sbprintf(b, "%d%s", id, open_shape)
+	if is_default {
+		strings.write_string(b, "<span title='Default chapter — readers start here.'>")
+	}
+	if is_orphan {
+		strings.write_string(b, "<span title='No chapters lead to this one!'>")
+	}
 	for ch in label {
 		switch ch {
 		case '"':
@@ -373,7 +431,13 @@ fc_node :: proc(b: ^strings.Builder, id: i64, name: string) {
 			strings.write_rune(b, ch)
 		}
 	}
-	strings.write_string(b, "\"]")
+	if is_orphan {
+		strings.write_string(b, "</span>")
+	}
+	if is_default {
+		strings.write_string(b, "</span>")
+	}
+	strings.write_string(b, close_shape)
 }
 
 // Look up a step's internal_name by id.
