@@ -25,7 +25,6 @@ WORKDIR /whatsnext
 
 # Vendor deps layer — only rebuilds when setup script or lib bindings change
 COPY bin/setup bin/setup
-COPY lib/ lib/
 RUN bin/setup
 
 # Source + build — rebuilds on any code/template/style change
