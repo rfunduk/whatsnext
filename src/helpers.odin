@@ -239,7 +239,7 @@ save_upload :: proc(
 	ok: bool,
 ) {
 	filename = fmt.aprintf("%d_%s%s", step_id, position, ext)
-	full_path := fmt.tprintf("uploads/%s", filename)
+	full_path, _ := filepath.join({config.data_dir, "uploads", filename}, context.temp_allocator)
 	if write_err := os.write_entire_file(full_path, data); write_err != nil {
 		log.errorf("Failed to write upload file: %s", full_path)
 		return "", false
@@ -249,7 +249,7 @@ save_upload :: proc(
 
 delete_upload :: proc(filename: string) {
 	if len(filename) == 0 { return }
-	full_path := fmt.tprintf("uploads/%s", filename)
+	full_path, _ := filepath.join({config.data_dir, "uploads", filename}, context.temp_allocator)
 	os.remove(full_path)
 }
 
@@ -263,7 +263,7 @@ serve_upload :: proc(connection: mhd.Connection, path: string) -> mhd.Result {
 		return respond(connection, .FORBIDDEN, "Forbidden\n", "text/plain")
 	}
 
-	full_path := fmt.tprintf("uploads/%s", path)
+	full_path, _ := filepath.join({config.data_dir, "uploads", path}, context.temp_allocator)
 	data, read_err := os.read_entire_file_from_path(full_path, context.allocator)
 	if read_err != nil { return respond(connection, .NOT_FOUND, "Not found\n", "text/plain") }
 

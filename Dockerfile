@@ -43,4 +43,4 @@ COPY --from=build /whatsnext/vendor/fonts/           /app/vendor/fonts/
 
 WORKDIR /app
 EXPOSE 8020
-CMD ["./whatsnext", "data/whatsnext.db"]
+CMD ["./whatsnext", "data"]

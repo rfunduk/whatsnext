@@ -474,7 +474,7 @@ pdf_compute_layout :: proc(story: Story, steps: []Step, choices: []Choice) -> [d
 
 		// Image top
 		if len(step.image_top) > 0 {
-			img_path := fmt.aprintf("uploads/%s", step.image_top)
+			img_path, _ := filepath.join({config.data_dir, "uploads", step.image_top}, context.allocator)
 			img_w, img_h := pdf_measure_image(doc, img_path)
 			if img_w > 0 && img_h > 0 {
 				scale := content_width / img_w
@@ -556,7 +556,7 @@ pdf_compute_layout :: proc(story: Story, steps: []Step, choices: []Choice) -> [d
 
 		// Image bottom
 		if len(step.image_bottom) > 0 {
-			img_path := fmt.aprintf("uploads/%s", step.image_bottom)
+			img_path, _ := filepath.join({config.data_dir, "uploads", step.image_bottom}, context.allocator)
 			img_w, img_h := pdf_measure_image(doc, img_path)
 			if img_w > 0 && img_h > 0 {
 				scale := content_width / img_w

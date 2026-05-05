@@ -6,11 +6,20 @@ import "core:fmt"
 import "core:log"
 import "core:mem"
 import "core:os"
+import "core:path/filepath"
 
 import mhd "lib:microhttpd"
 
 USE_TRACKING_ALLOCATOR :: #config(USE_TRACKING_ALLOCATOR, false)
 global_context: runtime.Context
+
+Args :: struct {
+	data_dir: string `args:"pos=0" usage:"Directory holding the SQLite database and uploads."`,
+}
+
+config := Args {
+	data_dir = ".",
+}
 
 main :: proc() {
 	context.logger = log.create_file_logger(
@@ -47,24 +56,21 @@ main :: proc() {
 
 	global_context = context
 
-	Options :: struct {
-		db_path: string `args:"pos=0" usage:"Path to SQLite database file."`,
-	}
+	flags.parse_or_exit(&config, os.args)
 
-	opt := Options {
-		db_path = "whatsnext.db",
-	}
-	flags.parse_or_exit(&opt, os.args)
+	os.make_directory(config.data_dir)
 
-	os.make_directory("uploads")
+	uploads_dir, _ := filepath.join({config.data_dir, "uploads"}, context.temp_allocator)
+	os.make_directory(uploads_dir)
+
+	db_path, _ := filepath.join({config.data_dir, "whatsnext.db"}, context.temp_allocator)
+	if !db_open(db_path) { return }
+	defer db_close()
 
 	pdf_generating = make(map[i64]bool)
 
 	load_templates()
 	defer cleanup_templates()
-
-	if !db_open(opt.db_path) { return }
-	defer db_close()
 
 	daemon := server_start()
 	if daemon == nil { return }
